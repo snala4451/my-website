@@ -234,6 +234,14 @@
             localStorage.setItem('adminName', username);
             localStorage.setItem('adminLoginTime', new Date().toISOString());
             
+            // 同时设置用户token，使管理员可以使用主页面功能
+            const userToken = 'user_admin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('userToken', userToken);
+            localStorage.setItem('userName', username);
+            localStorage.setItem('parseQuota', '999999'); // 无限次数（用999999表示）
+            localStorage.setItem('isAdmin', 'true'); // 标记为管理员
+            localStorage.setItem('registerTime', new Date().toISOString());
+            
             showToast('🎉 登录成功！正在跳转...', 'success');
             
             setTimeout(() => {
