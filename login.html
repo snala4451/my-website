@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 酸奶去水印工具</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            position: relative;
+        }
+        
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .login-container {
+            max-width: 450px;
+            margin: 80px auto;
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .login-box {
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.2);
+            position: relative;
+            z-index: 1001;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-title {
+            font-size: 28px;
+            color: #00FFFF;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            color: #00FFFF;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .form-input {
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1002;
+            width: 100%;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #00FFFF;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .praise-notice {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            color: #ffc107;
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        .btn-login {
+            padding: 15px;
+            background: rgba(0, 255, 255, 0.2);
+            border: 2px solid #00FFFF;
+            border-radius: 10px;
+            color: #00FFFF;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1002;
+            width: 100%;
+        }
+        
+        .btn-login:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            position: relative;
+            z-index: 1002;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    
+    <div class="login-container">
+        <div class="login-box">
+            <!-- 当前登录状态提示 -->
+            <div id="currentUserNotice" style="display: none; background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 20px; text-align: center; color: #00FF88; font-size: 13px;">
+                <span id="currentUserText"></span>
+                <button onclick="logoutAndSwitch()" style="margin-left: 10px; padding: 4px 12px; background: rgba(255, 68, 68, 0.2); border: 1px solid #FF4444; border-radius: 5px; color: #FF4444; cursor: pointer; font-size: 12px;">退出当前账号</button>
+            </div>
+            
+            <div class="login-header">
+                <h1 class="login-title">🎬 酸奶去水印工具</h1>
+                <p class="login-subtitle" id="formSubtitle">首次使用请完成验证</p>
+            </div>
+            
+            <!-- 新用户验证表单 -->
+            <div id="newUserForm" class="login-form">
+                <div class="praise-notice">
+                    🎁 新用户福利：夸邓方菲1句话，即可获得3次免费使用机会！
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">请夸邓方菲一句话：</label>
+                    <textarea 
+                        id="praiseInput" 
+                        class="form-input" 
+                        rows="3"
+                        placeholder="例如：邓方菲真是太优秀了！"
+                    ></textarea>
+                </div>
+                
+                <button class="btn-login" onclick="submitPraise()">
+                    ✨ 提交并开始使用
+                </button>
+            </div>
+            
+            <!-- 账号密码登录表单 -->
+            <div id="loginForm" class="login-form" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">账号</label>
+                    <input 
+                        type="text" 
+                        id="loginUsername" 
+                        class="form-input" 
+                        placeholder="请输入账号"
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input 
+                        type="password" 
+                        id="loginPassword" 
+                        class="form-input" 
+                        placeholder="请输入密码"
+                    />
+                </div>
+                
+                <button class="btn-login" onclick="handleLogin()">
+                    🚀 登录
+                </button>
+            </div>
+            
+            <!-- 注册表单 -->
+            <div id="registerForm" class="login-form" style="display: none;">
+                <div class="form-group">
+                    <label class="form-label">用户名</label>
+                    <input 
+                        type="text" 
+                        id="registerUsername" 
+                        class="form-input" 
+                        placeholder="请输入用户名（3-20个字符）"
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">密码</label>
+                    <input 
+                        type="password" 
+                        id="registerPassword" 
+                        class="form-input" 
+                        placeholder="请输入密码（至少6个字符）"
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">确认密码</label>
+                    <input 
+                        type="password" 
+                        id="registerPasswordConfirm" 
+                        class="form-input" 
+                        placeholder="请再次输入密码"
+                    />
+                </div>
+                
+                <div class="praise-notice" style="margin-top: 15px;">
+                    🎁 注册成功后，夸邓方菲1句话即可获得3次免费使用机会！
+                </div>
+                
+                <button class="btn-login" onclick="handleRegister()">
+                    ✨ 注册
+                </button>
+            </div>
+            
+            <div class="login-footer">
+                <span id="switchText">已有账号？</span>
+                <a href="#" onclick="switchForm(); return false;" style="color: #00FFFF; margin-right: 15px;" id="switchLink">账号登录</a>
+                <a href="#" onclick="showRegisterForm(); return false;" style="color: #00FF88; font-weight: 600;">注册账号</a>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <script src="script.js"></script>
+    <script>
+        let isNewUserMode = true;
+        
+        // 检查当前登录状态并显示提示
+        const currentToken = localStorage.getItem('userToken');
+        const currentUserName = localStorage.getItem('userName') || '游客';
+        
+        const notice = document.getElementById('currentUserNotice');
+        const text = document.getElementById('currentUserText');
+        
+        if (currentToken) {
+            // 已登录用户
+            text.textContent = `✓ 当前已登录：${currentUserName}`;
+            notice.style.display = 'block';
+        } else {
+            // 未登录显示游客
+            text.textContent = `👤 当前身份：游客`;
+            notice.style.display = 'block';
+            notice.style.background = 'rgba(108, 117, 125, 0.1)';
+            notice.style.borderColor = 'rgba(108, 117, 125, 0.3)';
+            notice.style.color = 'rgba(255, 255, 255, 0.7)';
+            // 隐藏退出按钮
+            notice.querySelector('button').style.display = 'none';
+        }
+        
+        // 初始化粒子背景
+        initParticles();
+        
+        // 退出当前账号并切换
+        function logoutAndSwitch() {
+            if (confirm('确定要退出当前账号吗？')) {
+                localStorage.removeItem('userToken');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('parseQuota');
+                localStorage.removeItem('registerTime');
+                showToast('✓ 已退出登录', 'success');
+                document.getElementById('currentUserNotice').style.display = 'none';
+            }
+        }
+        
+        // 切换表单
+        function switchForm() {
+            // 隐藏所有表单
+            document.getElementById('newUserForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'none';
+            
+            isNewUserMode = !isNewUserMode;
+            
+            if (isNewUserMode) {
+                // 切换到新用户验证
+                document.getElementById('newUserForm').style.display = 'block';
+                document.getElementById('formSubtitle').textContent = '首次使用请完成验证';
+                document.getElementById('switchText').textContent = '已有账号？';
+                document.getElementById('switchLink').textContent = '账号登录';
+            } else {
+                // 切换到账号登录
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('formSubtitle').textContent = '登录您的账号';
+                document.getElementById('switchText').textContent = '新用户？';
+                document.getElementById('switchLink').textContent = '免费获取';
+            }
+        }
+        
+        // 显示注册表单
+        function showRegisterForm() {
+            // 隐藏所有表单
+            document.getElementById('newUserForm').style.display = 'none';
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            
+            document.getElementById('formSubtitle').textContent = '注册新账号';
+            document.getElementById('switchText').textContent = '已有账号？';
+            document.getElementById('switchLink').textContent = '立即登录';
+            isNewUserMode = false;
+        }
+        
+        // 处理注册
+        function handleRegister() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value.trim();
+            const passwordConfirm = document.getElementById('registerPasswordConfirm').value.trim();
+            
+            // 验证用户名
+            if (!username) {
+                showToast('请输入用户名', 'error');
+                return;
+            }
+            
+            if (username.length < 3 || username.length > 20) {
+                showToast('用户名长度必须在3-20个字符之间', 'error');
+                return;
+            }
+            
+            // 验证密码
+            if (!password) {
+                showToast('请输入密码', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showToast('密码至少需要6个字符', 'error');
+                return;
+            }
+            
+            // 验证确认密码
+            if (password !== passwordConfirm) {
+                showToast('两次输入的密码不一致', 'error');
+                return;
+            }
+            
+            // 检查用户名是否已存在
+            const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+            if (users.find(u => u.username === username)) {
+                showToast('该用户名已被注册', 'error');
+                return;
+            }
+            
+            // 保存用户信息
+            users.push({
+                username: username,
+                password: password,
+                registerTime: new Date().toISOString()
+            });
+            localStorage.setItem('registeredUsers', JSON.stringify(users));
+            
+            showToast('🎉 注册成功！请夸邓方菲1句话获得3次免费机会', 'success');
+            
+            // 清空表单
+            document.getElementById('registerUsername').value = '';
+            document.getElementById('registerPassword').value = '';
+            document.getElementById('registerPasswordConfirm').value = '';
+            
+            // 1.5秒后切换到账号登录表单
+            setTimeout(() => {
+                isNewUserMode = false;
+                document.getElementById('registerForm').style.display = 'none';
+                document.getElementById('newUserForm').style.display = 'none';
+                document.getElementById('loginForm').style.display = 'block';
+                document.getElementById('formSubtitle').textContent = '登录您的账号';
+                document.getElementById('switchText').textContent = '新用户？';
+                document.getElementById('switchLink').textContent = '免费获取';
+            }, 1500);
+        }
+        
+        // 提交夸赞（新用户）
+        function submitPraise() {
+            const praise = document.getElementById('praiseInput').value.trim();
+            
+            if (!praise) {
+                showToast('请输入夸赞内容', 'error');
+                return;
+            }
+            
+            if (praise.length < 5) {
+                showToast('至少需要5个字哦~', 'error');
+                return;
+            }
+            
+            if (!praise.includes('邓方菲')) {
+                showToast('请在内容中包含"邓方菲"三个字', 'error');
+                return;
+            }
+            
+            // 生成用户token
+            const userToken = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            // 检查是否是从登录跳转过来的（通过placeholder判断）
+            const placeholder = document.getElementById('praiseInput').placeholder;
+            let userName = '新用户';
+            
+            // 如果placeholder包含用户名，说明是注册用户登录后跳转过来的
+            if (placeholder && placeholder.includes('，')) {
+                userName = placeholder.split('，')[0];
+            }
+            
+            // 保存用户信息
+            localStorage.setItem('userToken', userToken);
+            localStorage.setItem('parseQuota', '3'); // 新用户3次免费机会
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('registerTime', new Date().toISOString());
+            
+            // 记录夸赞
+            const praiseHistory = JSON.parse(localStorage.getItem('praiseHistory') || '[]');
+            praiseHistory.push({
+                date: new Date().toISOString(),
+                content: praise
+            });
+            localStorage.setItem('praiseHistory', JSON.stringify(praiseHistory));
+            
+            showToast('🎉 验证成功！获得3次免费机会', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        }
+        
+        // 处理登录（仅支持注册用户）
+        function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            
+            if (!username) {
+                showToast('请输入账号', 'error');
+                return;
+            }
+            
+            if (!password) {
+                showToast('请输入密码', 'error');
+                return;
+            }
+            
+            // 检查是否是注册用户
+            const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+            const user = users.find(u => u.username === username);
+            
+            if (!user) {
+                showToast('账号不存在，请先注册', 'error');
+                return;
+            }
+            
+            if (user.password !== password) {
+                showToast('密码错误', 'error');
+                return;
+            }
+            
+            // 登录成功，直接设置token并跳转
+            const userToken = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('userToken', userToken);
+            localStorage.setItem('parseQuota', '3'); // 默认3次免费机会
+            localStorage.setItem('userName', username);
+            localStorage.setItem('registerTime', new Date().toISOString());
+            
+            showToast('🎉 登录成功！', 'success');
+            
+            // 直接跳转到解析页面
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 500);
+        }
+        
+        // 支持回车登录
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (isNewUserMode) {
+                    submitPraise();
+                } else {
+                    handleLogin();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
