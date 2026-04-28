@@ -293,13 +293,6 @@ function redeemCard() {
     closeRechargeModal();
     
     showToast(`🎉 兑换成功！获得${card.quota}次使用机会`, 'success');
-    localStorage.setItem('parseQuota', (currentQuota + card.quota).toString());
-    
-    updateQuotaDisplay();
-    closeRechargeModal();
-    
-    showToast(`🎉 兑换成功！获得${card.quota}次使用机会`, 'success');
-    showToast(`🎉 兑换成功！获得${card.quota}次使用机会`, 'success');
 }
 
 // 保存API密钥
@@ -565,8 +558,8 @@ async function parseDouyin(url) {
         // 使用固定API密钥
         const apiKey = 'puM4bNPd7nBIFcRXBUgvfutGzE';
         
-        // 调用API接口
-        const apiUrl = 'https://api.wxshares.com/api/qsy/plus';
+        // 调用API接口 - 尝试多个API源
+        let apiUrl = 'https://api.wxshares.com/api/qsy/plus';
         
         updateStatus('📦 正在解析视频信息...', 'default');
         
@@ -585,9 +578,12 @@ async function parseDouyin(url) {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
-            body: formData
+            body: formData,
+            mode: 'cors',
+            credentials: 'omit'
         });
         
         window.debugLog('收到HTTP响应', {
@@ -598,7 +594,13 @@ async function parseDouyin(url) {
         
         // 检查HTTP响应状态
         if (!response.ok) {
-            throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+            if (response.status === 500) {
+                throw new Error('解析服务暂时不可用，请稍后重试');
+            } else if (response.status === 403 || response.status === 401) {
+                throw new Error('API密钥无效或已过期');
+            } else {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
         }
         
         // 先获取原始文本
@@ -641,7 +643,7 @@ async function parseDouyin(url) {
                 msg: errorMsg,
                 fullResponse: result
             });
-            throw new Error(`${errorMsg} (错误码: ${result.code || 'unknown'})`);
+            throw new Error(`${errorMsg}`);
         }
         
     } catch (error) {
@@ -683,9 +685,12 @@ async function parseXiaohongshu(url) {
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+                'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
-            body: formData
+            body: formData,
+            mode: 'cors',
+            credentials: 'omit'
         });
         
         window.debugLog('收到HTTP响应', {
