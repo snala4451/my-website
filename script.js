@@ -558,7 +558,7 @@ async function parseDouyin(url) {
         // 使用固定API密钥
         const apiKey = 'puM4bNPd7nBIFcRXBUgvfutGzE';
         
-        // 调用API接口 - 尝试多个API源
+        // 调用API接口
         let apiUrl = 'https://api.wxshares.com/api/qsy/plus';
         
         updateStatus('📦 正在解析视频信息...', 'default');
@@ -575,6 +575,10 @@ async function parseDouyin(url) {
             url: url
         });
         
+        // 创建带超时的fetch请求
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+        
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -583,8 +587,11 @@ async function parseDouyin(url) {
             },
             body: formData,
             mode: 'cors',
-            credentials: 'omit'
+            credentials: 'omit',
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         window.debugLog('收到HTTP响应', {
             status: response.status,
@@ -595,9 +602,11 @@ async function parseDouyin(url) {
         // 检查HTTP响应状态
         if (!response.ok) {
             if (response.status === 500) {
-                throw new Error('解析服务暂时不可用，请稍后重试');
+                throw new Error('服务器错误，请稍后重试');
             } else if (response.status === 403 || response.status === 401) {
-                throw new Error('API密钥无效或已过期');
+                throw new Error('API密钥无效');
+            } else if (response.status === 429) {
+                throw new Error('请求过于频繁，请稍后重试');
             } else {
                 throw new Error(`HTTP错误: ${response.status}`);
             }
@@ -614,7 +623,7 @@ async function parseDouyin(url) {
         } catch (e) {
             console.error('❌ JSON解析失败:', e);
             console.error('原始响应:', responseText);
-            throw new Error('API返回的数据格式错误，无法解析');
+            throw new Error('API返回的数据格式错误');
         }
         
         // 调试：打印API响应
@@ -652,6 +661,12 @@ async function parseDouyin(url) {
             message: error.message,
             stack: error.stack
         });
+        
+        // 处理特殊错误
+        if (error.name === 'AbortError') {
+            throw new Error('请求超时，请检查网络连接后重试');
+        }
+        
         throw error;
     }
 }
@@ -682,6 +697,10 @@ async function parseXiaohongshu(url) {
             url: url
         });
         
+        // 创建带超时的fetch请求
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+        
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -690,8 +709,11 @@ async function parseXiaohongshu(url) {
             },
             body: formData,
             mode: 'cors',
-            credentials: 'omit'
+            credentials: 'omit',
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         window.debugLog('收到HTTP响应', {
             status: response.status,
@@ -701,7 +723,15 @@ async function parseXiaohongshu(url) {
         
         // 检查HTTP响应状态
         if (!response.ok) {
-            throw new Error(`HTTP错误: ${response.status} ${response.statusText}`);
+            if (response.status === 500) {
+                throw new Error('服务器错误，请稍后重试');
+            } else if (response.status === 403 || response.status === 401) {
+                throw new Error('API密钥无效');
+            } else if (response.status === 429) {
+                throw new Error('请求过于频繁，请稍后重试');
+            } else {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
         }
         
         // 先获取原始文本
@@ -753,6 +783,12 @@ async function parseXiaohongshu(url) {
             message: error.message,
             stack: error.stack
         });
+        
+        // 处理特殊错误
+        if (error.name === 'AbortError') {
+            throw new Error('请求超时，请检查网络连接后重试');
+        }
+        
         throw error;
     }
 }
