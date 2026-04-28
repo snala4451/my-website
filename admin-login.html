@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员登录 - 酸奶去水印工具</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            position: relative;
+        }
+        
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        .login-container {
+            max-width: 450px;
+            margin: 80px auto;
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .login-box {
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 255, 255, 0.2);
+            position: relative;
+            z-index: 1001;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-title {
+            font-size: 28px;
+            color: #00FFFF;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+        }
+        
+        .admin-badge {
+            display: inline-block;
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+            border-radius: 20px;
+            padding: 5px 15px;
+            color: #ffc107;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            color: #00FFFF;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .form-input {
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1002;
+            width: 100%;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #00FFFF;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .btn-login {
+            padding: 15px;
+            background: rgba(0, 255, 255, 0.2);
+            border: 2px solid #00FFFF;
+            border-radius: 10px;
+            color: #00FFFF;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1002;
+            width: 100%;
+        }
+        
+        .btn-login:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            position: relative;
+            z-index: 1002;
+        }
+        
+        .login-footer a {
+            color: #00FFFF;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .login-footer a:hover {
+            color: #00FF88;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1 class="login-title">🛠️ 管理员登录</h1>
+                <p class="login-subtitle">酸奶去水印工具 - 管理后台</p>
+                <span class="admin-badge">🔐 仅限管理员访问</span>
+            </div>
+            
+            <div class="login-form">
+                <div class="form-group">
+                    <label class="form-label">管理员账号</label>
+                    <input 
+                        type="text" 
+                        id="adminUsername" 
+                        class="form-input" 
+                        placeholder="请输入管理员账号"
+                        autocomplete="username"
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">管理员密码</label>
+                    <input 
+                        type="password" 
+                        id="adminPassword" 
+                        class="form-input" 
+                        placeholder="请输入管理员密码"
+                        autocomplete="current-password"
+                    />
+                </div>
+                
+                <button class="btn-login" onclick="handleAdminLogin()">
+                    🚀 登录管理后台
+                </button>
+            </div>
+            
+            <div class="login-footer">
+                <a href="index.html">← 返回用户端</a>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <script src="script.js"></script>
+    <script>
+        // 固定的管理员账号密码
+        const ADMIN_USERNAME = 'snala';
+        const ADMIN_PASSWORD = 'yy888888';
+        
+        // 初始化粒子背景
+        initParticles();
+        
+        // 处理管理员登录
+        function handleAdminLogin() {
+            const username = document.getElementById('adminUsername').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
+            
+            if (!username) {
+                showToast('请输入管理员账号', 'error');
+                return;
+            }
+            
+            if (!password) {
+                showToast('请输入管理员密码', 'error');
+                return;
+            }
+            
+            // 验证账号密码
+            if (username !== ADMIN_USERNAME) {
+                showToast('管理员账号错误', 'error');
+                return;
+            }
+            
+            if (password !== ADMIN_PASSWORD) {
+                showToast('管理员密码错误', 'error');
+                return;
+            }
+            
+            // 登录成功，设置管理员标识
+            const adminToken = 'admin_' + Date.now();
+            localStorage.setItem('adminToken', adminToken);
+            localStorage.setItem('adminName', username);
+            localStorage.setItem('adminLoginTime', new Date().toISOString());
+            
+            showToast('🎉 登录成功！正在跳转...', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'admin.html';
+            }, 1000);
+        }
+        
+        // 支持回车登录
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleAdminLogin();
+            }
+        });
+        
+        // 检查是否已登录管理员
+        const adminToken = localStorage.getItem('adminToken');
+        if (adminToken) {
+            // 已登录，直接跳转
+            window.location.href = 'admin.html';
+        }
+    </script>
+</body>
+</html>
