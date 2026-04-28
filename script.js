@@ -1,13 +1,26 @@
 // 初始化测试卡密（如果没有卡密则生成）
 function initTestCards() {
     const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
-    if (cards.length === 0) {
+    
+    // 检查是否已有测试卡密
+    const hasTestCards = cards.some(c => c.code.startsWith('TEST-'));
+    
+    if (cards.length === 0 || !hasTestCards) {
         const testCards = [
             { code: 'TEST-0001-0001-0001', quota: 10, createTime: new Date().toISOString(), used: false, usedTime: null },
             { code: 'TEST-0002-0002-0002', quota: 20, createTime: new Date().toISOString(), used: false, usedTime: null },
             { code: 'TEST-0003-0003-0003', quota: 30, createTime: new Date().toISOString(), used: false, usedTime: null }
         ];
-        localStorage.setItem('cardCodes', JSON.stringify(testCards));
+        
+        // 如果没有卡密，直接设置测试卡密
+        if (cards.length === 0) {
+            localStorage.setItem('cardCodes', JSON.stringify(testCards));
+        } else {
+            // 如果有卡密但没有测试卡密，添加测试卡密
+            cards.push(...testCards);
+            localStorage.setItem('cardCodes', JSON.stringify(cards));
+        }
+        
         console.log('✓ 已初始化测试卡密');
     }
 }
@@ -247,10 +260,19 @@ function redeemCard() {
     // 从localStorage获取所有卡密
     const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
     
+    // 调试：打印所有卡密
+    console.log('📋 当前所有卡密:', cards);
+    console.log('🔍 输入的卡密:', cardCode);
+    
     // 查找卡密（不区分大小写）
-    const cardIndex = cards.findIndex(c => c.code.toUpperCase() === cardCode && !c.used);
+    const cardIndex = cards.findIndex(c => {
+        const match = c.code.toUpperCase() === cardCode && !c.used;
+        console.log(`检查卡密: ${c.code} (已使用: ${c.used}) - 匹配: ${match}`);
+        return match;
+    });
     
     if (cardIndex === -1) {
+        console.log('❌ 卡密未找到或已使用');
         showToast('卡密无效或已使用', 'error');
         return;
     }
@@ -265,6 +287,12 @@ function redeemCard() {
     
     // 增加用户次数
     const currentQuota = parseInt(localStorage.getItem('parseQuota') || '0');
+    localStorage.setItem('parseQuota', (currentQuota + card.quota).toString());
+    
+    updateQuotaDisplay();
+    closeRechargeModal();
+    
+    showToast(`🎉 兑换成功！获得${card.quota}次使用机会`, 'success');
     localStorage.setItem('parseQuota', (currentQuota + card.quota).toString());
     
     updateQuotaDisplay();
