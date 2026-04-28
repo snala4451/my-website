@@ -2,6 +2,22 @@
 initParticles();
 loadAdminData();
 
+// 初始化测试卡密（如果没有卡密则生成）
+function initTestCards() {
+    const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
+    if (cards.length === 0) {
+        const testCards = [
+            { code: 'TEST-0001-0001-0001', quota: 10, createTime: new Date().toISOString(), used: false, usedTime: null },
+            { code: 'TEST-0002-0002-0002', quota: 20, createTime: new Date().toISOString(), used: false, usedTime: null },
+            { code: 'TEST-0003-0003-0003', quota: 30, createTime: new Date().toISOString(), used: false, usedTime: null }
+        ];
+        localStorage.setItem('cardCodes', JSON.stringify(testCards));
+        console.log('✓ 已初始化测试卡密');
+    }
+}
+
+initTestCards();
+
 // 切换标签
 function switchTab(tab) {
     // 更新导航按钮
