@@ -1,3 +1,17 @@
+// 初始化测试卡密（如果没有卡密则生成）
+function initTestCards() {
+    const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
+    if (cards.length === 0) {
+        const testCards = [
+            { code: 'TEST-0001-0001-0001', quota: 10, createTime: new Date().toISOString(), used: false, usedTime: null },
+            { code: 'TEST-0002-0002-0002', quota: 20, createTime: new Date().toISOString(), used: false, usedTime: null },
+            { code: 'TEST-0003-0003-0003', quota: 30, createTime: new Date().toISOString(), used: false, usedTime: null }
+        ];
+        localStorage.setItem('cardCodes', JSON.stringify(testCards));
+        console.log('✓ 已初始化测试卡密');
+    }
+}
+
 // 页面加载时显示免责声明和初始化粒子背景
 window.addEventListener('DOMContentLoaded', () => {
     // 检查登录状态
@@ -17,6 +31,9 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // 初始化粒子背景
     initParticles();
+    
+    // 初始化测试卡密
+    initTestCards();
     
     // 初始化用户系统
     initUserSystem();
@@ -220,7 +237,7 @@ function confirmPayment() {
 
 // 兑换卡密
 function redeemCard() {
-    const cardCode = document.getElementById('cardCodeInput').value.trim();
+    const cardCode = document.getElementById('cardCodeInput').value.trim().toUpperCase();
     
     if (!cardCode) {
         showToast('请输入卡密', 'error');
@@ -229,16 +246,21 @@ function redeemCard() {
     
     // 从localStorage获取所有卡密
     const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
-    const card = cards.find(c => c.code === cardCode && !c.used);
     
-    if (!card) {
+    // 查找卡密（不区分大小写）
+    const cardIndex = cards.findIndex(c => c.code.toUpperCase() === cardCode && !c.used);
+    
+    if (cardIndex === -1) {
         showToast('卡密无效或已使用', 'error');
         return;
     }
     
+    const card = cards[cardIndex];
+    
     // 标记卡密已使用
     card.used = true;
     card.usedTime = new Date().toISOString();
+    cards[cardIndex] = card;
     localStorage.setItem('cardCodes', JSON.stringify(cards));
     
     // 增加用户次数
@@ -248,6 +270,7 @@ function redeemCard() {
     updateQuotaDisplay();
     closeRechargeModal();
     
+    showToast(`🎉 兑换成功！获得${card.quota}次使用机会`, 'success');
     showToast(`🎉 兑换成功！获得${card.quota}次使用机会`, 'success');
 }
 
