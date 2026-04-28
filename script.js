@@ -860,35 +860,26 @@ function showPreview(data) {
         } 
         // 策略2：按标点符号分割（如果没有换行符）
         else {
-            // 使用正则表达式分割，保留标点符号
-            const parts = textWithoutTopics.split(/([！。？!.?])/);
-            let titlePart = '';
-            let contentPart = '';
-            let foundFirstPunctuation = false;
+            // 查找第一个标点符号的位置
+            const punctuationMatch = textWithoutTopics.match(/[！。？!.?]/);
             
-            for (let i = 0; i < parts.length; i++) {
-                const part = parts[i];
-                if (!part) continue;
-                
-                // 检查是否是标点符号
-                if (/^[！。？!.?]$/.test(part)) {
-                    if (!foundFirstPunctuation) {
-                        titlePart += part;
-                        foundFirstPunctuation = true;
-                    } else {
-                        contentPart += part;
-                    }
+            if (punctuationMatch) {
+                const punctuationIndex = textWithoutTopics.indexOf(punctuationMatch[0]);
+                // 标题是第一个标点符号之前的内容（包括标点符号）
+                titleText = textWithoutTopics.substring(0, punctuationIndex + 1).trim();
+                // 正文是第一个标点符号之后的内容
+                contentText = textWithoutTopics.substring(punctuationIndex + 1).trim();
+            } else {
+                // 如果没有标点符号，按长度分割
+                // 如果文本很长，前30%作为标题，后70%作为正文
+                if (textWithoutTopics.length > 50) {
+                    const splitPoint = Math.ceil(textWithoutTopics.length * 0.3);
+                    titleText = textWithoutTopics.substring(0, splitPoint).trim();
+                    contentText = textWithoutTopics.substring(splitPoint).trim();
                 } else {
-                    if (!foundFirstPunctuation) {
-                        titlePart += part;
-                    } else {
-                        contentPart += part;
-                    }
+                    titleText = textWithoutTopics;
                 }
             }
-            
-            titleText = titlePart.trim();
-            contentText = contentPart.trim();
         }
     }
     
