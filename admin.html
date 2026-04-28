@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>卡密管理系统 - 酸奶去水印工具</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: #0D1117;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .admin-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .admin-title {
+            font-size: 36px;
+            color: #00FFFF;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+            margin-bottom: 10px;
+            animation: neonPulse 2s ease-in-out infinite;
+        }
+        
+        .admin-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            background: rgba(13, 17, 23, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 25px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            color: #00FFFF;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+        }
+        
+        .tab-btn.active {
+            background: rgba(0, 255, 255, 0.3);
+            border-color: #00FFFF;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+        
+        .stat-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            font-size: 42px;
+            color: #00FFFF;
+            font-weight: 700;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.8);
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .card-generator {
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .generator-title {
+            font-size: 20px;
+            color: #00FFFF;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .generator-form {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+        }
+        
+        .form-select, .form-input {
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .form-select:focus, .form-input:focus {
+            outline: none;
+            border-color: #00FFFF;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+        }
+        
+        .btn-generate {
+            padding: 12px 30px;
+            background: rgba(0, 255, 136, 0.2);
+            border: 2px solid #00FF88;
+            border-radius: 8px;
+            color: #00FF88;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        .btn-generate:hover {
+            background: rgba(0, 255, 136, 0.3);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .btn-export {
+            padding: 12px 30px;
+            background: rgba(255, 193, 7, 0.2);
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            color: #ffc107;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+        
+        .btn-export:hover {
+            background: rgba(255, 193, 7, 0.3);
+            box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .card-list {
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .card-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .card-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        
+        .card-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        .card-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .card-item:hover {
+            border-color: rgba(0, 255, 255, 0.5);
+            transform: translateX(5px);
+        }
+        
+        .card-left {
+            flex: 1;
+        }
+        
+        .card-code-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .card-code {
+            font-size: 24px;
+            color: #00FFFF;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+        }
+        
+        .btn-copy {
+            padding: 6px 15px;
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            border-radius: 6px;
+            color: #00FFFF;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-copy:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-copy:active {
+            transform: translateY(0);
+        }
+        
+        .card-meta {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 8px;
+        }
+        
+        .card-status {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        
+        .status-unused {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00FF88;
+            color: #00FF88;
+        }
+        
+        .status-used {
+            background: rgba(108, 117, 125, 0.2);
+            border: 1px solid rgba(108, 117, 125, 0.5);
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .empty-icon {
+            font-size: 60px;
+            margin-bottom: 15px;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: rgba(0, 255, 136, 0.95);
+            color: #0D1117;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.4);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 9999;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.error {
+            background: rgba(255, 68, 68, 0.95);
+            color: #fff;
+            box-shadow: 0 5px 20px rgba(255, 68, 68, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+    
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1 class="admin-title">🛠️ 卡密管理系统</h1>
+            <p class="admin-subtitle">酸奶去水印工具 - 管理后台</p>
+        </div>
+        
+        <!-- 管理员信息栏 -->
+        <div style="background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 15px; padding: 15px 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">👨‍💼</span>
+                <span style="color: #00FF88; font-weight: 600;">管理员：<span id="adminNameDisplay">加载中...</span></span>
+            </div>
+            <button onclick="adminLogout()" style="padding: 8px 20px; background: rgba(255, 68, 68, 0.2); border: 1px solid #FF4444; border-radius: 8px; color: #FF4444; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                🚪 退出登录
+            </button>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">📊 数据概览</button>
+            <button class="tab-btn" onclick="switchTab('generate')">🎫 生成卡密</button>
+            <button class="tab-btn" onclick="switchTab('list')">📋 卡密列表</button>
+            <button class="tab-btn" onclick="switchTab('users')">👥 用户管理</button>
+        </div>
+        
+        <!-- 数据概览 -->
+        <div id="overview" class="tab-content active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🎫</div>
+                    <div class="stat-value" id="totalCards">0</div>
+                    <div class="stat-label">总卡密数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-value" id="usedCards">0</div>
+                    <div class="stat-label">已使用</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value" id="unusedCards">0</div>
+                    <div class="stat-label">未使用</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="totalUsers">0</div>
+                    <div class="stat-label">总用户数</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 生成卡密 -->
+        <div id="generate" class="tab-content">
+            <div class="card-generator">
+                <h2 class="generator-title">🎁 生成新卡密</h2>
+                <div class="generator-form">
+                    <div class="form-group">
+                        <label class="form-label">使用次数</label>
+                        <select id="cardQuota" class="form-select">
+                            <option value="3">3次使用 (0.9元)</option>
+                            <option value="10">10次使用 (3元)</option>
+                            <option value="30">30次使用 (8元)</option>
+                            <option value="100">100次使用 (25元)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">生成数量</label>
+                        <input type="number" id="cardCount" class="form-input" value="1" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">备注（可选）</label>
+                        <input type="text" id="cardNote" class="form-input" placeholder="例如：给张三的卡密">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 20px;">
+                    <button class="btn-generate" onclick="generateCards()">🎁 生成卡密</button>
+                    <button class="btn-export" onclick="exportCards()">📥 导出未使用卡密</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 卡密列表 -->
+        <div id="list" class="tab-content">
+            <div class="card-list" id="cardList">
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <div>暂无卡密数据</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 用户管理 -->
+        <div id="users" class="tab-content">
+            <div class="card-list" id="userList">
+                <div class="empty-state">
+                    <div class="empty-icon">👤</div>
+                    <div>暂无用户数据</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast"></div>
+    
+    <script src="script.js"></script>
+    <script>
+        // 检查管理员登录状态
+        const adminToken = localStorage.getItem('adminToken');
+        if (!adminToken) {
+            // 未登录，跳转到管理员登录页面
+            window.location.href = 'admin-login.html';
+        }
+        
+        // 显示管理员名称
+        const adminName = localStorage.getItem('adminName') || '管理员';
+        document.getElementById('adminNameDisplay').textContent = adminName;
+        
+        // 管理员退出登录
+        function adminLogout() {
+            if (confirm('确定要退出管理后台吗？')) {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminName');
+                localStorage.removeItem('adminLoginTime');
+                showToast('✓ 已退出登录', 'success');
+                setTimeout(() => {
+                    window.location.href = 'admin-login.html';
+                }, 1000);
+            }
+        }
+        
+        // 初始化
+        initParticles();
+        loadData();
+        
+        // 切换标签
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            
+            loadData();
+        }
+        
+        // 加载数据
+        function loadData() {
+            loadStats();
+            loadCardList();
+            loadUserList();
+        }
+        
+        // 加载统计数据
+        function loadStats() {
+            const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
+            const usedCards = cards.filter(c => c.used).length;
+            const unusedCards = cards.length - usedCards;
+            
+            document.getElementById('totalCards').textContent = cards.length;
+            document.getElementById('usedCards').textContent = usedCards;
+            document.getElementById('unusedCards').textContent = unusedCards;
+            document.getElementById('totalUsers').textContent = localStorage.getItem('userToken') ? 1 : 0;
+        }
+        
+        // 生成卡密
+        function generateCards() {
+            const quota = parseInt(document.getElementById('cardQuota').value);
+            const count = parseInt(document.getElementById('cardCount').value);
+            const note = document.getElementById('cardNote').value.trim();
+            
+            if (count < 1 || count > 100) {
+                showToast('生成数量必须在1-100之间', 'error');
+                return;
+            }
+            
+            const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
+            
+            for (let i = 0; i < count; i++) {
+                const code = generateCardCode();
+                cards.push({
+                    code: code,
+                    quota: quota,
+                    note: note || '',
+                    createTime: new Date().toISOString(),
+                    used: false,
+                    usedTime: null
+                });
+            }
+            
+            localStorage.setItem('cardCodes', JSON.stringify(cards));
+            
+            showToast(`✓ 成功生成 ${count} 个卡密`, 'success');
+            document.getElementById('cardNote').value = '';
+            loadData();
+        }
+        
+        // 生成卡密代码
+        function generateCardCode() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let code = '';
+            for (let i = 0; i < 16; i++) {
+                if (i > 0 && i % 4 === 0) code += '-';
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+        
+        // 加载卡密列表
+        function loadCardList() {
+            const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
+            const cardList = document.getElementById('cardList');
+            
+            if (cards.length === 0) {
+                cardList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div>暂无卡密数据，请先生成卡密</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            cardList.innerHTML = cards.map(card => `
+                <div class="card-item">
+                    <div class="card-left">
+                        <div class="card-code-row">
+                            <div class="card-code">${card.code}</div>
+                            <button class="btn-copy" onclick="copyCardCode('${card.code}')">
+                                <span>📋</span>
+                                <span>复制</span>
+                            </button>
+                        </div>
+                        <div class="card-meta">
+                            ${card.quota}次使用 | 
+                            创建：${new Date(card.createTime).toLocaleString()}
+                            ${card.note ? ` | 备注：${card.note}` : ''}
+                            ${card.used ? ` | 使用：${new Date(card.usedTime).toLocaleString()}` : ''}
+                        </div>
+                    </div>
+                    <div class="card-status ${card.used ? 'status-used' : 'status-unused'}">
+                        ${card.used ? '已使用' : '未使用'}
+                    </div>
+                </div>
+            `).reverse().join('');
+        }
+        
+        // 复制卡密代码
+        function copyCardCode(code) {
+            // 创建临时文本框
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            
+            // 选择并复制
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // 移动端兼容
+            
+            try {
+                document.execCommand('copy');
+                showToast('✓ 卡密已复制到剪贴板', 'success');
+            } catch (err) {
+                showToast('复制失败，请手动复制', 'error');
+            }
+            
+            // 移除临时元素
+            document.body.removeChild(textarea);
+        }
+        
+        // 导出卡密
+        function exportCards() {
+            const cards = JSON.parse(localStorage.getItem('cardCodes') || '[]');
+            const unusedCards = cards.filter(c => !c.used);
+            
+            if (unusedCards.length === 0) {
+                showToast('没有可导出的未使用卡密', 'error');
+                return;
+            }
+            
+            let text = '═══════════════════════════════════════\n';
+            text += '     酸奶去水印工具 - 卡密列表\n';
+            text += '═══════════════════════════════════════\n\n';
+            
+            unusedCards.forEach((card, index) => {
+                text += `${index + 1}. ${card.code}\n`;
+                text += `   次数：${card.quota}次\n`;
+                if (card.note) text += `   备注：${card.note}\n`;
+                text += `   创建时间：${new Date(card.createTime).toLocaleString()}\n\n`;
+            });
+            
+            text += '═══════════════════════════════════════\n';
+            text += `总计：${unusedCards.length} 个未使用卡密\n`;
+            text += `导出时间：${new Date().toLocaleString()}\n`;
+            text += '═══════════════════════════════════════\n';
+            
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `卡密列表_${Date.now()}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showToast('✓ 导出成功', 'success');
+        }
+        
+        // 加载用户列表
+        function loadUserList() {
+            const userList = document.getElementById('userList');
+            const userToken = localStorage.getItem('userToken');
+            
+            if (!userToken) {
+                userList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">👤</div>
+                        <div>暂无用户数据</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            const userName = localStorage.getItem('userName') || '用户';
+            const quota = localStorage.getItem('parseQuota') || '0';
+            const registerTime = localStorage.getItem('registerTime');
+            
+            userList.innerHTML = `
+                <div class="card-item">
+                    <div>
+                        <div class="card-code" style="font-size: 18px;">${userName}</div>
+                        <div class="card-meta">
+                            Token: ${userToken.substring(0, 30)}... | 
+                            剩余次数: ${quota} | 
+                            注册时间: ${new Date(registerTime).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
