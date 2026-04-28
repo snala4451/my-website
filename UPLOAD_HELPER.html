@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 上传助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .file-list {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .file-list h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .file-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .file-item label {
+            cursor: pointer;
+            flex: 1;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .file-item input[type="checkbox"]:checked + label {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .instructions {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+            color: #333;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+        
+        .progress {
+            background: #f0f0f0;
+            border-radius: 6px;
+            height: 8px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        
+        .footer {
+            background: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #eee;
+        }
+        
+        .emoji {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 GitHub 上传助手</h1>
+            <p>快速上传所有文件到 GitHub，然后部署到 Vercel</p>
+        </div>
+        
+        <div class="content">
+            <!-- 第 1 步 -->
+            <div class="section">
+                <h2>
+                    <span class="step-number">1</span>
+                    访问 GitHub 仓库
+                </h2>
+                <div class="instructions">
+                    <ol>
+                        <li>访问你的 GitHub 仓库：<strong>https://github.com/snala4451/my-website</strong></li>
+                        <li>确保你已登录 GitHub</li>
+                        <li>准备好上传文件</li>
+                    </ol>
+                </div>
+                <a href="https://github.com/snala4451/my-website" target="_blank" class="btn btn-primary">
+                    打开 GitHub 仓库
+                </a>
+            </div>
+            
+            <!-- 第 2 步 -->
+            <div class="section">
+                <h2>
+                    <span class="step-number">2</span>
+                    上传新增文件
+                </h2>
+                <div class="instructions">
+                    <ol>
+                        <li>点击 "Add file" → "Upload files"</li>
+                        <li>选择以下所有文件并上传</li>
+                        <li>点击 "Commit changes"</li>
+                    </ol>
+                </div>
+                
+                <div class="file-list">
+                    <h3>📁 新增文件（14 个）</h3>
+                    <div class="file-item">
+                        <input type="checkbox" id="file1">
+                        <label for="file1">api/proxy.js</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file2">
+                        <label for="file2">START_HERE.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file3">
+                        <label for="file3">QUICK_REFERENCE.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file4">
+                        <label for="file4">NEXT_STEPS.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file5">
+                        <label for="file5">DEPLOYMENT_GUIDE.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file6">
+                        <label for="file6">SOLUTION_SUMMARY.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file7">
+                        <label for="file7">README_VERCEL_PROXY.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file8">
+                        <label for="file8">FINAL_SUMMARY.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file9">
+                        <label for="file9">README_SOLUTION.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file10">
+                        <label for="file10">CHECKLIST.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file11">
+                        <label for="file11">COMPLETION_REPORT.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file12">
+                        <label for="file12">MANUAL_DEPLOYMENT.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file13">
+                        <label for="file13">DEPLOY_NOW.md</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file14">
+                        <label for="file14">READY_TO_DEPLOY.txt</label>
+                    </div>
+                </div>
+                
+                <div class="progress">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+            
+            <!-- 第 3 步 -->
+            <div class="section">
+                <h2>
+                    <span class="step-number">3</span>
+                    上传修改的文件
+                </h2>
+                <div class="instructions">
+                    <ol>
+                        <li>再次点击 "Add file" → "Upload files"</li>
+                        <li>选择以下修改后的文件</li>
+                        <li>点击 "Commit changes"</li>
+                    </ol>
+                </div>
+                
+                <div class="file-list">
+                    <h3>📝 修改文件（2 个）</h3>
+                    <div class="file-item">
+                        <input type="checkbox" id="file15">
+                        <label for="file15">vercel.json</label>
+                    </div>
+                    <div class="file-item">
+                        <input type="checkbox" id="file16">
+                        <label for="file16">script.js</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 第 4 步 -->
+            <div class="section">
+                <h2>
+                    <span class="step-number">4</span>
+                    部署到 Vercel
+                </h2>
+                <div class="instructions">
+                    <ol>
+                        <li>访问 <strong>https://vercel.com</strong></li>
+                        <li>点击 "New Project"</li>
+                        <li>选择你的 GitHub 仓库 "my-website"</li>
+                        <li>点击 "Import"</li>
+                        <li>点击 "Deploy"</li>
+                        <li>等待 1-2 分钟部署完成</li>
+                    </ol>
+                </div>
+                <a href="https://vercel.com" target="_blank" class="btn btn-primary">
+                    打开 Vercel
+                </a>
+            </div>
+            
+            <!-- 第 5 步 -->
+            <div class="section">
+                <h2>
+                    <span class="step-number">5</span>
+                    测试功能
+                </h2>
+                <div class="instructions">
+                    <ol>
+                        <li>打开 Vercel 提供的 URL</li>
+                        <li>尝试解析一个抖音或小红书链接</li>
+                        <li>检查是否成功（不是模拟数据）</li>
+                    </ol>
+                </div>
+                <div class="status info" id="testStatus">
+                    💡 提示：部署完成后，在浏览器控制台运行以下代码测试 API 代理：<br><br>
+                    <code>fetch('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'puM4bNPd7nBIFcRXBUgvfutGzE', url: 'https://www.douyin.com/video/1234567890' }) }).then(r => r.json()).then(data => console.log('✅ 成功:', data)).catch(e => console.error('❌ 失败:', e))</code>
+                </div>
+            </div>
+            
+            <!-- 快速链接 -->
+            <div class="section">
+                <h2>
+                    <span class="emoji">🔗</span>
+                    快速链接
+                </h2>
+                <div class="button-group">
+                    <a href="https://github.com/snala4451/my-website" target="_blank" class="btn btn-primary">
+                        GitHub 仓库
+                    </a>
+                    <a href="https://vercel.com" target="_blank" class="btn btn-primary">
+                        Vercel 部署
+                    </a>
+                    <a href="DEPLOYMENT_PACKAGE.md" class="btn btn-secondary">
+                        部署包说明
+                    </a>
+                    <a href="MANUAL_DEPLOYMENT.md" class="btn btn-secondary">
+                        手动部署指南
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>✅ 所有文件已准备就绪，现在就开始部署吧！🚀</p>
+        </div>
+    </div>
+    
+    <script>
+        // 更新进度条
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateProgress);
+        });
+        
+        function updateProgress() {
+            const checked = document.querySelectorAll('input[type="checkbox"]:checked').length;
+            const total = checkboxes.length;
+            const percentage = (checked / total) * 100;
+            document.getElementById('progressBar').style.width = percentage + '%';
+        }
+    </script>
+</body>
+</html>
