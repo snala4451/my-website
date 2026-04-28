@@ -462,12 +462,31 @@
                 return;
             }
             
+            // 检查是否是默认测试账号
+            if (username === 'snala' && password === 'yy888888') {
+                // 登录成功，直接设置token并跳转
+                const userToken = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('userToken', userToken);
+                localStorage.setItem('parseQuota', '999999'); // 无限次数
+                localStorage.setItem('userName', username);
+                localStorage.setItem('isAdmin', 'true');
+                localStorage.setItem('registerTime', new Date().toISOString());
+                
+                showToast('🎉 登录成功！', 'success');
+                
+                // 直接跳转到解析页面
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 500);
+                return;
+            }
+            
             // 检查是否是注册用户
             const users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
             const user = users.find(u => u.username === username);
             
             if (!user) {
-                showToast('账号不存在，请先注册', 'error');
+                showToast('账号不存在，请先注册或使用默认账号 snala/yy888888', 'error');
                 return;
             }
             
