@@ -581,40 +581,48 @@ async function parseDouyin(url) {
         
         // 创建带超时的fetch请求
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20秒超时
         
         let response;
         try {
+            // 尝试多种请求方式
             response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'Accept': '*/*',
+                    'Accept-Language': 'zh-CN,zh;q=0.9',
+                    'Origin': window.location.origin,
+                    'Referer': window.location.href
                 },
                 body: formData,
                 mode: 'cors',
-                credentials: 'omit',
-                signal: controller.signal
+                credentials: 'include'
             });
         } catch (fetchError) {
             clearTimeout(timeoutId);
-            console.error('❌ Fetch 请求失败:', fetchError);
+            console.error('❌ 第一次请求失败:', fetchError);
             
-            // 如果是网络错误，使用模拟数据
-            if (fetchError.name === 'AbortError') {
-                throw new Error('请求超时，请检查网络连接后重试');
-            } else {
-                console.log('💡 API 不可用，使用模拟数据演示...');
-                // 使用模拟数据
-                const mockData = {
-                    title: '这是一个测试视频标题',
-                    url: 'https://example.com/video.mp4',
-                    photo: 'https://via.placeholder.com/400x600?text=Video+Cover',
-                    pics: []
-                };
-                showPreview(mockData);
-                showToast('⚠️ 使用模拟数据演示（API 暂时不可用）', 'warning');
-                return;
+            // 尝试第二种方式 - 不带 credentials
+            try {
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+                    },
+                    body: formData,
+                    mode: 'no-cors'
+                });
+            } catch (secondError) {
+                clearTimeout(timeoutId);
+                console.error('❌ 第二次请求也失败:', secondError);
+                
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('请求超时，请检查网络连接后重试');
+                } else {
+                    throw new Error('网络连接失败，请检查网络或稍后重试');
+                }
             }
         }
         
@@ -627,7 +635,7 @@ async function parseDouyin(url) {
         });
         
         // 检查HTTP响应状态
-        if (!response.ok) {
+        if (!response.ok && response.status !== 0) {
             if (response.status === 500) {
                 throw new Error('服务器错误，请稍后重试');
             } else if (response.status === 403 || response.status === 401) {
@@ -642,6 +650,10 @@ async function parseDouyin(url) {
         // 先获取原始文本
         const responseText = await response.text();
         window.debugLog('原始响应文本', responseText.substring(0, 500));
+        
+        if (!responseText) {
+            throw new Error('API 返回空响应');
+        }
         
         // 尝试解析JSON
         let result;
@@ -689,11 +701,6 @@ async function parseDouyin(url) {
             stack: error.stack
         });
         
-        // 处理特殊错误
-        if (error.name === 'AbortError') {
-            throw new Error('请求超时，请检查网络连接后重试');
-        }
-        
         throw error;
     }
 }
@@ -726,38 +733,48 @@ async function parseXiaohongshu(url) {
         
         // 创建带超时的fetch请求
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20秒超时
         
         let response;
         try {
+            // 尝试多种请求方式
             response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15',
+                    'Accept': '*/*',
+                    'Accept-Language': 'zh-CN,zh;q=0.9',
+                    'Origin': window.location.origin,
+                    'Referer': window.location.href
                 },
                 body: formData,
                 mode: 'cors',
-                credentials: 'omit',
-                signal: controller.signal
+                credentials: 'include'
             });
         } catch (fetchError) {
             clearTimeout(timeoutId);
-            console.error('❌ Fetch 请求失败:', fetchError);
+            console.error('❌ 第一次请求失败:', fetchError);
             
-            // 如果是网络错误，使用模拟数据
-            if (fetchError.name === 'AbortError') {
-                throw new Error('请求超时，请检查网络连接后重试');
-            } else {
-                console.log('💡 API 不可用，使用模拟数据演示...');
-                // 使用模拟数据
-                const mockData = {
-                    title: '这是一个测试笔记标题',
-                    pics: ['https://via.placeholder.com/400x600?text=Image+1', 'https://via.placeholder.com/400x600?text=Image+2']
-                };
-                showPreview(mockData);
-                showToast('⚠️ 使用模拟数据演示（API 暂时不可用）', 'warning');
-                return;
+            // 尝试第二种方式 - 不带 credentials
+            try {
+                response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+                    },
+                    body: formData,
+                    mode: 'no-cors'
+                });
+            } catch (secondError) {
+                clearTimeout(timeoutId);
+                console.error('❌ 第二次请求也失败:', secondError);
+                
+                if (fetchError.name === 'AbortError') {
+                    throw new Error('请求超时，请检查网络连接后重试');
+                } else {
+                    throw new Error('网络连接失败，请检查网络或稍后重试');
+                }
             }
         }
         
@@ -770,7 +787,7 @@ async function parseXiaohongshu(url) {
         });
         
         // 检查HTTP响应状态
-        if (!response.ok) {
+        if (!response.ok && response.status !== 0) {
             if (response.status === 500) {
                 throw new Error('服务器错误，请稍后重试');
             } else if (response.status === 403 || response.status === 401) {
@@ -785,6 +802,10 @@ async function parseXiaohongshu(url) {
         // 先获取原始文本
         const responseText = await response.text();
         window.debugLog('原始响应文本', responseText.substring(0, 500));
+        
+        if (!responseText) {
+            throw new Error('API 返回空响应');
+        }
         
         // 尝试解析JSON
         let result;
@@ -831,11 +852,6 @@ async function parseXiaohongshu(url) {
             message: error.message,
             stack: error.stack
         });
-        
-        // 处理特殊错误
-        if (error.name === 'AbortError') {
-            throw new Error('请求超时，请检查网络连接后重试');
-        }
         
         throw error;
     }
