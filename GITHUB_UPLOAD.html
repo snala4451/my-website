@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 文件上传工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .info-box strong {
+            color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            display: block;
+        }
+        
+        .step {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .step h3 {
+            color: #667eea;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .step p {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .step code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📤 GitHub 文件上传</h1>
+            <p>快速上传 script.js 到你的 GitHub 仓库</p>
+        </div>
+        
+        <div class="info-box">
+            <strong>📌 说明：</strong> 这个工具会帮你生成上传 script.js 到 GitHub 的步骤。你需要手动在 GitHub 网站上完成上传。
+        </div>
+        
+        <div class="step">
+            <h3>第 1 步：准备信息</h3>
+            <p>填写你的 GitHub 信息</p>
+        </div>
+        
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="username">GitHub 用户名</label>
+                <input type="text" id="username" placeholder="例如：snala4451" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="repo">仓库名称</label>
+                <input type="text" id="repo" placeholder="例如：my-website" value="my-website" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="token">GitHub 访问令牌（可选）</label>
+                <input type="password" id="token" placeholder="ghp_xxxxx（可选，用于自动上传）">
+            </div>
+            
+            <div class="step">
+                <h3>第 2 步：选择上传方式</h3>
+                <p>选择你想要的上传方式</p>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="radio" name="method" value="web" checked> 
+                    方式 A：GitHub Web 界面（推荐）
+                </label>
+                <p style="color: #666; font-size: 12px; margin-top: 5px;">
+                    ✅ 最简单，无需令牌<br>
+                    ✅ 在浏览器中完成
+                </p>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="radio" name="method" value="api"> 
+                    方式 B：GitHub API（需要令牌）
+                </label>
+                <p style="color: #666; font-size: 12px; margin-top: 5px;">
+                    ✅ 自动上传<br>
+                    ⚠️ 需要访问令牌
+                </p>
+            </div>
+            
+            <div class="button-group">
+                <button type="button" class="btn btn-primary" onclick="generateInstructions()">
+                    生成上传步骤
+                </button>
+                <button type="reset" class="btn btn-secondary">
+                    清空
+                </button>
+            </div>
+        </form>
+        
+        <div id="status" class="status"></div>
+        
+        <div id="instructions" style="display: none; margin-top: 30px;">
+            <div class="step">
+                <h3>📋 上传步骤</h3>
+                <div id="instructionsContent"></div>
+            </div>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="btn btn-primary" onclick="copyInstructions()">
+                    📋 复制步骤
+                </button>
+                <button class="btn btn-secondary" onclick="openGitHub()">
+                    🔗 打开 GitHub
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function generateInstructions() {
+            const username = document.getElementById('username').value.trim();
+            const repo = document.getElementById('repo').value.trim();
+            const token = document.getElementById('token').value.trim();
+            const method = document.querySelector('input[name="method"]:checked').value;
+            
+            if (!username) {
+                showStatus('请输入 GitHub 用户名', 'error');
+                return;
+            }
+            
+            if (!repo) {
+                showStatus('请输入仓库名称', 'error');
+                return;
+            }
+            
+            let instructions = '';
+            
+            if (method === 'web') {
+                instructions = generateWebInstructions(username, repo);
+            } else {
+                if (!token) {
+                    showStatus('请输入 GitHub 访问令牌', 'error');
+                    return;
+                }
+                instructions = generateAPIInstructions(username, repo, token);
+            }
+            
+            document.getElementById('instructionsContent').innerHTML = instructions;
+            document.getElementById('instructions').style.display = 'block';
+            showStatus('✅ 上传步骤已生成！', 'success');
+        }
+        
+        function generateWebInstructions(username, repo) {
+            const repoUrl = `https://github.com/${username}/${repo}`;
+            
+            return `
+                <p style="margin-bottom: 15px; color: #333;">
+                    <strong>方式 A：GitHub Web 界面（推荐）</strong>
+                </p>
+                <ol style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <li>访问你的仓库：<a href="${repoUrl}" target="_blank" class="link">${repoUrl}</a></li>
+                    <li>点击 <strong>"Add file"</strong> 按钮</li>
+                    <li>选择 <strong>"Upload files"</strong></li>
+                    <li>拖拽或选择 <strong>script.js</strong> 文件</li>
+                    <li>在下方输入提交信息：<code>Update script.js - fix mobile parsing</code></li>
+                    <li>点击 <strong>"Commit changes"</strong> 按钮</li>
+                    <li>等待 1-2 分钟，GitHub Pages 会自动更新</li>
+                    <li>在手机上打开你的网站，测试解析功能</li>
+                </ol>
+                <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                    ✅ 完成！手机版现在应该可以工作了！
+                </p>
+            `;
+        }
+        
+        function generateAPIInstructions(username, repo, token) {
+            return `
+                <p style="margin-bottom: 15px; color: #333;">
+                    <strong>方式 B：GitHub API（自动上传）</strong>
+                </p>
+                <p style="color: #666; margin-bottom: 15px;">
+                    ⚠️ 注意：这种方法需要你的访问令牌。请确保令牌有足够的权限。
+                </p>
+                <p style="color: #666; margin-bottom: 15px;">
+                    <strong>步骤：</strong>
+                </p>
+                <ol style="margin-left: 20px; color: #666; line-height: 1.8;">
+                    <li>确保你已经填写了正确的访问令牌</li>
+                    <li>点击下方的 "自动上传" 按钮</li>
+                    <li>等待上传完成</li>
+                    <li>在手机上打开你的网站，测试解析功能</li>
+                </ol>
+                <p style="margin-top: 15px; color: #667eea; font-weight: 600;">
+                    ✅ 完成！手机版现在应该可以工作了！
+                </p>
+            `;
+        }
+        
+        function copyInstructions() {
+            const content = document.getElementById('instructionsContent').innerText;
+            navigator.clipboard.writeText(content).then(() => {
+                showStatus('✅ 步骤已复制到剪贴板！', 'success');
+            }).catch(() => {
+                showStatus('❌ 复制失败，请手动复制', 'error');
+            });
+        }
+        
+        function openGitHub() {
+            const username = document.getElementById('username').value.trim();
+            const repo = document.getElementById('repo').value.trim();
+            const url = `https://github.com/${username}/${repo}`;
+            window.open(url, '_blank');
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
