@@ -443,7 +443,8 @@
             showToast('🎉 验证成功！获得3次免费机会', 'success');
             
             setTimeout(() => {
-                window.location.href = 'index.html';
+                const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                window.location.href = basePath + '/index.html';
             }, 1500);
         }
         
@@ -476,7 +477,8 @@
                 
                 // 直接跳转到解析页面
                 setTimeout(() => {
-                    window.location.href = 'index.html';
+                    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                    window.location.href = basePath + '/index.html';
                 }, 500);
                 return;
             }
