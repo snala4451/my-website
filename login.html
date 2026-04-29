@@ -132,6 +132,40 @@
             position: relative;
             z-index: 1002;
         }
+        
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        .toast.show {
+            opacity: 1;
+        }
+        
+        .toast.success {
+            background: rgba(0, 200, 100, 0.8);
+            border: 1px solid rgba(0, 255, 136, 0.5);
+        }
+        
+        .toast.error {
+            background: rgba(200, 0, 0, 0.8);
+            border: 1px solid rgba(255, 68, 68, 0.5);
+        }
+        
+        .toast.warning {
+            background: rgba(200, 150, 0, 0.8);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+        }
     </style>
 </head>
 <body>
@@ -251,6 +285,18 @@
     
     <script src="script.js"></script>
     <script>
+        // 显示 Toast 提示
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+        
         let isNewUserMode = true;
         
         // 检查当前登录状态并显示提示
@@ -276,7 +322,9 @@
         }
         
         // 初始化粒子背景
-        initParticles();
+        if (typeof initParticles === 'function') {
+            initParticles();
+        }
         
         // 退出当前账号并切换
         function logoutAndSwitch() {
