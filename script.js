@@ -31,8 +31,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const userToken = localStorage.getItem('userToken');
     if (!userToken) {
         // 避免循环重定向
-        if (window.location.pathname.indexOf('login.html') === -1) {
-            window.location.href = 'login.html';
+        if (!window.location.pathname.endsWith('login.html')) {
+            const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+            window.location.href = basePath + '/login.html';
         }
         return;
     }
@@ -95,7 +96,27 @@ function checkLogin() {
 
 // 跳转到登录页面
 function goToLogin() {
-    window.location.href = 'login.html';
+    // 获取当前路径的基础 URL
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    window.location.href = basePath + '/login.html';
+}
+
+// 跳转到首页
+function goToHome() {
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    window.location.href = basePath + '/index.html';
+}
+
+// 跳转到管理后台
+function goToAdmin() {
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    window.location.href = basePath + '/admin.html';
+}
+
+// 跳转到管理员登录
+function goToAdminLogin() {
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+    window.location.href = basePath + '/admin-login.html';
 }
 
 // 初始化用户系统
@@ -146,6 +167,13 @@ function consumeQuota() {
 function showRechargeModal() {
     document.getElementById('rechargeModal').classList.add('show');
     document.getElementById('cardCodeInput').value = '';
+    
+    // 清空套餐选择状态
+    document.querySelectorAll('.recharge-package').forEach(pkg => {
+        pkg.classList.remove('selected');
+    });
+    document.getElementById('confirmRechargeBtn').disabled = true;
+    window.selectedPackage = null;
 }
 
 // 关闭充值弹窗
@@ -219,7 +247,11 @@ function switchPaymentMethod(method) {
     // 更新标签状态
     const tabs = document.querySelectorAll('.payment-tab');
     tabs.forEach(tab => tab.classList.remove('active'));
-    event.target.closest('.payment-tab').classList.add('active');
+    
+    const activeTab = event.target.closest('.payment-tab');
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
     
     // 切换二维码显示
     document.getElementById('wechatQR').classList.remove('active');
