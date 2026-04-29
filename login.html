@@ -498,8 +498,11 @@
         
         // 处理登录（仅支持注册用户）
         function handleLogin() {
+            console.log('handleLogin called');
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value.trim();
+            
+            console.log('Username:', username, 'Password:', password);
             
             if (!username) {
                 showToast('请输入账号', 'error');
@@ -513,6 +516,7 @@
             
             // 检查是否是默认测试账号
             if (username === 'snala' && password === 'yy888888') {
+                console.log('Default account login');
                 // 登录成功，直接设置token并跳转
                 const userToken = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('userToken', userToken);
@@ -526,6 +530,7 @@
                 // 直接跳转到解析页面
                 setTimeout(() => {
                     const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                    console.log('Redirecting to:', basePath + '/index.html');
                     window.location.href = basePath + '/index.html';
                 }, 500);
                 return;
@@ -557,6 +562,7 @@
             // 直接跳转到解析页面
             setTimeout(() => {
                 const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+                console.log('Redirecting to:', basePath + '/index.html');
                 window.location.href = basePath + '/index.html';
             }, 500);
         }
