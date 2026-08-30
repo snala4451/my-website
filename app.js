@@ -34,6 +34,13 @@ const DEFAULT_DISH_IMAGES = Object.freeze({
   "dish-spicy-tofu": "assets/food/spicy-tofu.jpg",
   "dish-mushroom-soup": "assets/food/mushroom-soup.jpg"
 });
+const DEFAULT_DISH_IMAGES_BY_NAME = Object.freeze({
+  "葱香排骨": DEFAULT_DISH_IMAGES["dish-ribs"],
+  "干煸豆角": DEFAULT_DISH_IMAGES["dish-beans"],
+  "番茄炒蛋": DEFAULT_DISH_IMAGES["dish-tomato-eggs"],
+  "辣炒豆腐": DEFAULT_DISH_IMAGES["dish-spicy-tofu"],
+  "菌菇汤": DEFAULT_DISH_IMAGES["dish-mushroom-soup"]
+});
 const EXPIRY_PRESETS = [0, 3, 7, 14, 30, 90, 180, 365];
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -195,9 +202,10 @@ function normalizeState(input) {
     usedIds.add(id);
     const colors = Array.isArray(item.colors) ? item.colors : [];
     const dishware = item.dishware === "bowl" ? "bowl" : "plate";
+    const name = cleanText(item.name, 24) || `未命名菜品 ${index + 1}`;
     return {
       id,
-      name: cleanText(item.name, 24) || `未命名菜品 ${index + 1}`,
+      name,
       category: CATEGORIES.includes(item.category) ? item.category : "其他",
       cooked: item.cooked !== false,
       colors: [safeColor(colors[0], "#dba91e"), safeColor(colors[1], "#63358a")],
@@ -206,7 +214,7 @@ function normalizeState(input) {
       tags: normalizeStringList(item.tags, 8).map(tag => tag.slice(0, 16)),
       ingredients: normalizeStringList(item.ingredients),
       steps: normalizeStringList(item.steps, 16),
-      image: safeImage(item.image) || DEFAULT_DISH_IMAGES[id] || "",
+      image: safeImage(item.image) || DEFAULT_DISH_IMAGES[id] || DEFAULT_DISH_IMAGES_BY_NAME[name] || "",
       imageFit: item.imageFit === "contain" ? "contain" : "cover",
       dishware,
       dishwarePattern: resolveDishwarePattern(dishware, item.dishwarePattern).id
