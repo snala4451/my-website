@@ -44,6 +44,8 @@ const DEFAULT_DISH_IMAGES_BY_NAME = Object.freeze({
 const EXPIRY_PRESETS = [0, 3, 7, 14, 30, 90, 180, 365];
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const TURNTABLE_SLOT_COUNT = 3;
+const TURNTABLE_STEP_DEGREES = 120;
 
 function dateKey(offsetDays = 0) {
   const date = new Date();
@@ -316,6 +318,7 @@ let cropSheetScrollTop = 0;
 const cropPointers = new Map();
 let recipeOptions = { dishId: "", template: "sun", ratio: "long" };
 let turntableRotation = 0;
+let turntableDishIds = [];
 let bgmContext = null;
 let bgmTimer = null;
 let bgmStep = 0;
@@ -464,13 +467,32 @@ function visibleDishes() {
   return state.dishes.filter(dish => (state.menuMode === "cooked" ? dish.cooked : !dish.cooked) && (state.categoryFilter === "全部" || dish.category === state.categoryFilter));
 }
 
+function resetTurntable() {
+  turntableRotation = 0;
+  turntableDishIds = [];
+}
+
+function turntableDishesFor(visible) {
+  const visibleIds = new Set(visible.map(dish => dish.id));
+  turntableDishIds = turntableDishIds.filter(id => visibleIds.has(id));
+  if (state.selectedDish && visibleIds.has(state.selectedDish) && !turntableDishIds.includes(state.selectedDish)) {
+    turntableDishIds.unshift(state.selectedDish);
+  }
+  visible.forEach(dish => {
+    if (turntableDishIds.length < TURNTABLE_SLOT_COUNT && !turntableDishIds.includes(dish.id)) turntableDishIds.push(dish.id);
+  });
+  turntableDishIds = turntableDishIds.slice(0, TURNTABLE_SLOT_COUNT);
+  return turntableDishIds.map(getDish).filter(Boolean);
+}
+
 function renderMenu() {
   const visible = visibleDishes();
   const selected = visible.find(dish => dish.id === state.selectedDish) || visible[0];
-  if (selected) state.selectedDish = selected.id;
-  const turntableDishes = selected
-    ? [selected, ...visible.filter(dish => dish.id !== selected.id)].slice(0, 3)
-    : [];
+  if (selected && selected.id !== state.selectedDish) {
+    state.selectedDish = selected.id;
+    resetTurntable();
+  }
+  const turntableDishes = turntableDishesFor(visible);
   const positions = ["p1", "p2", "p3"];
   return `
     <section class="page" aria-labelledby="menuTitle">
@@ -1018,23 +1040,63 @@ function randomTomorrow() {
   showToast(`明天就吃「${dish.name}」吧`);
 }
 
-function spinTurntable() {
-  const platter = document.querySelector(".platter");
-  const dishButtons = [...document.querySelectorAll(".turntable-dish")];
-  if (!platter || dishButtons.length < 2) return showToast("再多记一道菜，转盘才转得起来");
-  turntableRotation += 120;
-  platter.style.setProperty("--turntable-angle", `${turntableRotation}deg`);
-  platter.style.setProperty("--counter-angle", `${-turntableRotation}deg`);
-  const currentIndex = Math.max(0, dishButtons.findIndex(button => button.dataset.id === state.selectedDish));
-  const nextButton = dishButtons[(currentIndex + 1) % dishButtons.length];
-  state.selectedDish = nextButton.dataset.id;
+function updateTurntableSelection() {
   document.querySelectorAll(".menu-item, .turntable-dish").forEach(button => {
     const selected = button.dataset.id === state.selectedDish;
     button.classList.toggle("is-selected", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
+}
+
+function applyTurntableRotation(platter = document.querySelector(".platter")) {
+  if (!platter) return;
+  platter.style.setProperty("--turntable-angle", `${turntableRotation}deg`);
+  platter.style.setProperty("--counter-angle", `${-turntableRotation}deg`);
+}
+
+function selectMenuDish(dishId, announce = false) {
+  const targetDish = visibleDishes().find(dish => dish.id === dishId);
+  const platter = document.querySelector(".platter");
+  const wheelIds = [...document.querySelectorAll(".turntable-dish")].map(button => button.dataset.id);
+  if (!targetDish || !platter || wheelIds.length === 0) return;
+
+  const currentId = state.selectedDish;
+  const currentIndex = Math.max(0, wheelIds.indexOf(currentId));
+  let targetIndex = wheelIds.indexOf(dishId);
+  let platterWasRebuilt = false;
+
+  if (targetIndex < 0) {
+    targetIndex = (currentIndex + 1) % wheelIds.length;
+    turntableDishIds = [...wheelIds];
+    turntableDishIds[targetIndex] = dishId;
+    state.selectedDish = dishId;
+    render();
+    platterWasRebuilt = true;
+  } else {
+    state.selectedDish = dishId;
+    updateTurntableSelection();
+  }
+
+  let slotOffset = targetIndex - currentIndex;
+  const halfway = wheelIds.length / 2;
+  if (slotOffset > halfway) slotOffset -= wheelIds.length;
+  if (slotOffset < -halfway) slotOffset += wheelIds.length;
+  turntableRotation -= slotOffset * TURNTABLE_STEP_DEGREES;
+
+  const currentPlatter = document.querySelector(".platter");
+  if (platterWasRebuilt && currentPlatter) void currentPlatter.offsetWidth;
+  applyTurntableRotation(currentPlatter);
+  updateTurntableSelection();
   saveState();
-  showToast(`转到「${getDish(state.selectedDish)?.name || "下一道菜"}」`);
+  if (announce) showToast(`转到「${targetDish.name}」`);
+}
+
+function spinTurntable() {
+  const visible = visibleDishes();
+  if (visible.length < 2) return showToast("再多记一道菜，转盘才转得起来");
+  const currentIndex = Math.max(0, visible.findIndex(dish => dish.id === state.selectedDish));
+  const nextDish = visible[(currentIndex + 1) % visible.length];
+  selectMenuDish(nextDish.id, true);
 }
 
 async function shareText(title, text) {
@@ -1226,6 +1288,7 @@ async function importData(file) {
   if (!next.dishes.length) throw new Error("备份中没有可用菜品");
   if (!window.confirm("导入会覆盖当前厨房数据，确定继续吗？")) return false;
   state = next;
+  resetTurntable();
   render();
   showToast("厨房数据已导入");
   return true;
@@ -1331,11 +1394,13 @@ app.addEventListener("click", async event => {
   if (action === "mode") {
     state.menuMode = target.dataset.value === "wanted" ? "wanted" : "cooked";
     state.selectedDish = visibleDishes()[0]?.id || "";
+    resetTurntable();
     render();
   }
   if (action === "toggle-menu") {
     state.menuMode = state.menuMode === "cooked" ? "wanted" : "cooked";
     state.selectedDish = visibleDishes()[0]?.id || "";
+    resetTurntable();
     render();
   }
   if (action === "random-plan") randomPlan(target.dataset.day);
@@ -1353,8 +1418,7 @@ app.addEventListener("click", async event => {
   }
   if (action === "add-dish") openSheet(dishForm());
   if (action === "select-menu") {
-    state.selectedDish = target.dataset.id;
-    render();
+    selectMenuDish(target.dataset.id);
   }
   if (["arrange", "edit-dish", "recipe"].includes(action)) {
     const dish = getDish(state.selectedDish) || visibleDishes()[0];
@@ -1372,6 +1436,7 @@ app.addEventListener("click", async event => {
     dish.cooked = !dish.cooked;
     const destination = dish.cooked ? "我烧过的" : "我想吃的";
     state.selectedDish = visibleDishes()[0]?.id || "";
+    resetTurntable();
     render();
     showToast(`已移到「${destination}」`);
   }
@@ -1398,6 +1463,7 @@ app.addEventListener("change", async event => {
   if (event.target.id === "categoryFilter") {
     state.categoryFilter = event.target.value;
     state.selectedDish = "";
+    resetTurntable();
     render();
   }
   if (event.target.id === "bgmToggle") {
@@ -1498,6 +1564,7 @@ sheet.addEventListener("click", async event => {
   const dish = getDish(actionTarget.dataset.id || recipeOptions.dishId);
   if (action === "reset-data") {
     state = normalizeState(defaults);
+    resetTurntable();
     closeSheet();
     render();
     showToast("体验数据已重置");
@@ -1629,6 +1696,8 @@ sheet.addEventListener("submit", event => {
     else state.dishes.push(next);
     state.selectedDish = next.id;
     state.menuMode = next.cooked ? "cooked" : "wanted";
+    if (state.categoryFilter !== "全部" && state.categoryFilter !== next.category) state.categoryFilter = "全部";
+    resetTurntable();
     closeSheet();
     render();
     showToast(existing ? "菜品已更新" : "新菜加入菜单啦");

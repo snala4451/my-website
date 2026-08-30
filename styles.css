@@ -331,9 +331,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   background: transparent;
   transition: transform 650ms cubic-bezier(0.22, 0.8, 0.24, 1);
 }
-.turntable-dish.p1 { top: 34px; left: 26px; }
-.turntable-dish.p2 { top: 48px; left: 168px; }
-.turntable-dish.p3 { top: 186px; left: 74px; }
+.turntable-dish.p1 { top: 48px; left: 17px; }
+.turntable-dish.p2 { top: 48px; left: 166px; }
+.turntable-dish.p3 { top: 177px; left: 91px; }
 .turntable-plate {
   --rim-pattern: #fffdf4;
   display: grid;
