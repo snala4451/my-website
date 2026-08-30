@@ -334,11 +334,4 @@ document.querySelector("#sheetClose").addEventListener("click", closeSheet);
 backdrop.addEventListener("click", closeSheet);
 document.addEventListener("keydown", event => { if (event.key === "Escape" && !sheet.hidden) closeSheet(); });
 
-function updateClock() {
-  const now = new Date();
-  document.querySelector("#clock").textContent = new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
-}
-
-updateClock();
-setInterval(updateClock, 30000);
 render();
