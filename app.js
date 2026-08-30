@@ -1,9 +1,42 @@
-const STORAGE_KEY = "huang-chef-state-v2";
-const LEGACY_STORAGE_KEY = "yike-menu-state-v1";
+const STORAGE_KEY = "huang-chef-state-v3";
+const LEGACY_STORAGE_KEYS = ["huang-chef-state-v2", "yike-menu-state-v1"];
 const CATEGORIES = ["主菜", "主食", "荤菜", "配菜", "素菜", "汤羹", "小吃", "甜品", "饮品", "其他"];
+const DISHWARE_PATTERNS = {
+  plate: [
+    { id: "plate-sunburst", name: "太阳纹" },
+    { id: "plate-violet-rays", name: "紫霞纹" },
+    { id: "plate-daisy", name: "雏菊纹" },
+    { id: "plate-checker", name: "棋盘格" },
+    { id: "plate-dots", name: "紫圆点" },
+    { id: "plate-stripes", name: "斜彩带" },
+    { id: "plate-waves", name: "水波纹" },
+    { id: "plate-garden", name: "花园纹" },
+    { id: "plate-confetti", name: "彩纸纹" },
+    { id: "plate-night", name: "星夜纹" }
+  ],
+  bowl: [
+    { id: "bowl-lotus", name: "莲花纹" },
+    { id: "bowl-cloud", name: "云朵纹" },
+    { id: "bowl-plum", name: "梅花纹" },
+    { id: "bowl-rings", name: "金环纹" },
+    { id: "bowl-mosaic", name: "马赛克" },
+    { id: "bowl-ripple", name: "涟漪纹" },
+    { id: "bowl-stars", name: "星点纹" },
+    { id: "bowl-leaf", name: "绿叶纹" },
+    { id: "bowl-candy", name: "糖果纹" },
+    { id: "bowl-night", name: "夜金纹" }
+  ]
+};
+const DEFAULT_DISH_IMAGES = Object.freeze({
+  "dish-ribs": "assets/food/braised-ribs.jpg",
+  "dish-beans": "assets/food/dry-fried-beans.jpg",
+  "dish-tomato-eggs": "assets/food/tomato-eggs.jpg",
+  "dish-spicy-tofu": "assets/food/spicy-tofu.jpg",
+  "dish-mushroom-soup": "assets/food/mushroom-soup.jpg"
+});
 const EXPIRY_PRESETS = [0, 3, 7, 14, 30, 90, 180, 365];
 const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
 function dateKey(offsetDays = 0) {
   const date = new Date();
@@ -19,7 +52,7 @@ function addDays(day, amount) {
 }
 
 const defaults = {
-  version: 2,
+  version: 3,
   tab: "home",
   menuMode: "cooked",
   categoryFilter: "全部",
@@ -37,7 +70,7 @@ const defaults = {
       tags: ["下饭"],
       ingredients: ["排骨 500g", "小葱 4 根", "生抽 2 汤匙", "冰糖 10g"],
       steps: ["排骨冷水下锅焯水，冲洗干净。", "小火炒化冰糖，放入排骨翻匀。", "加入调味料焖煮，最后撒葱收汁。"],
-      image: ""
+      image: DEFAULT_DISH_IMAGES["dish-ribs"]
     },
     {
       id: "dish-beans",
@@ -50,7 +83,7 @@ const defaults = {
       tags: ["快手菜"],
       ingredients: ["豆角 350g", "蒜 3 瓣", "干辣椒 4 个"],
       steps: ["豆角沥干水分后煸至表皮起皱。", "爆香蒜末和干辣椒。", "倒回豆角，加盐翻匀。"],
-      image: ""
+      image: DEFAULT_DISH_IMAGES["dish-beans"]
     },
     {
       id: "dish-tomato-eggs",
@@ -63,7 +96,7 @@ const defaults = {
       tags: ["家常"],
       ingredients: ["番茄 2 个", "鸡蛋 3 个", "盐 适量"],
       steps: ["鸡蛋炒至刚凝固后盛出。", "番茄炒软出汁。", "倒回鸡蛋，调味后快速翻匀。"],
-      image: ""
+      image: DEFAULT_DISH_IMAGES["dish-tomato-eggs"]
     },
     {
       id: "dish-spicy-tofu",
@@ -76,7 +109,7 @@ const defaults = {
       tags: ["想尝试"],
       ingredients: ["嫩豆腐 1 盒", "辣椒 2 个", "蒜 2 瓣"],
       steps: ["豆腐切块，擦干表面水分。", "煎至两面金黄。", "加入辣椒和调味汁翻匀。"],
-      image: ""
+      image: DEFAULT_DISH_IMAGES["dish-spicy-tofu"]
     },
     {
       id: "dish-mushroom-soup",
@@ -89,7 +122,7 @@ const defaults = {
       tags: ["暖胃"],
       ingredients: ["混合菌菇 300g", "姜 2 片", "白胡椒 少许"],
       steps: ["菌菇洗净切段。", "热锅炒香姜片和菌菇。", "加水煮开，小火煮 12 分钟后调味。"],
-      image: ""
+      image: DEFAULT_DISH_IMAGES["dish-mushroom-soup"]
     }
   ],
   stock: [
@@ -136,12 +169,19 @@ function safeUrl(value) {
 }
 
 function safeImage(value) {
-  return typeof value === "string" && value.length <= 900000 && /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(value) ? value : "";
+  if (typeof value !== "string") return "";
+  if (/^assets\/food\/[a-z0-9-]+\.(?:jpe?g|png|webp)$/i.test(value)) return value;
+  return value.length <= 900000 && /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(value) ? value : "";
 }
 
 function normalizeStringList(value, limit = 20) {
   const source = Array.isArray(value) ? value : typeof value === "string" ? value.split(/\r?\n/) : [];
   return source.map(item => cleanText(item, 180)).filter(Boolean).slice(0, limit);
+}
+
+function resolveDishwarePattern(dishware, patternId) {
+  const type = dishware === "bowl" ? "bowl" : "plate";
+  return DISHWARE_PATTERNS[type].find(pattern => pattern.id === patternId) || DISHWARE_PATTERNS[type][0];
 }
 
 function normalizeState(input) {
@@ -154,18 +194,22 @@ function normalizeState(input) {
     if (usedIds.has(id)) id = `dish-${index + 1}-${Date.now()}`;
     usedIds.add(id);
     const colors = Array.isArray(item.colors) ? item.colors : [];
+    const dishware = item.dishware === "bowl" ? "bowl" : "plate";
     return {
       id,
       name: cleanText(item.name, 24) || `未命名菜品 ${index + 1}`,
       category: CATEGORIES.includes(item.category) ? item.category : "其他",
       cooked: item.cooked !== false,
       colors: [safeColor(colors[0], "#dba91e"), safeColor(colors[1], "#63358a")],
-      note: cleanText(item.note, 240),
+      note: cleanText(item.note, 300),
       recipeUrl: safeUrl(item.recipeUrl),
       tags: normalizeStringList(item.tags, 8).map(tag => tag.slice(0, 16)),
       ingredients: normalizeStringList(item.ingredients),
       steps: normalizeStringList(item.steps, 16),
-      image: safeImage(item.image)
+      image: safeImage(item.image) || DEFAULT_DISH_IMAGES[id] || "",
+      imageFit: item.imageFit === "contain" ? "contain" : "cover",
+      dishware,
+      dishwarePattern: resolveDishwarePattern(dishware, item.dishwarePattern).id
     };
   });
   const dishById = new Map(dishes.map(dish => [dish.id, dish]));
@@ -208,7 +252,7 @@ function normalizeState(input) {
   const selectedDish = dishById.has(String(source.selectedDish)) ? String(source.selectedDish) : dishes[0]?.id || "";
   const settings = source.settings && typeof source.settings === "object" ? source.settings : {};
   return {
-    version: 2,
+    version: 3,
     tab: tabs.includes(source.tab) ? source.tab : "home",
     menuMode: source.menuMode === "wanted" ? "wanted" : "cooked",
     categoryFilter: source.categoryFilter === "全部" || CATEGORIES.includes(source.categoryFilter) ? source.categoryFilter : "全部",
@@ -231,10 +275,15 @@ function normalizeState(input) {
 }
 
 function loadState() {
-  for (const key of [STORAGE_KEY, LEGACY_STORAGE_KEY]) {
+  for (const key of [STORAGE_KEY, ...LEGACY_STORAGE_KEYS]) {
     try {
       const saved = localStorage.getItem(key);
-      if (saved) return normalizeState(JSON.parse(saved));
+      if (!saved) continue;
+      const normalized = normalizeState(JSON.parse(saved));
+      if (key !== STORAGE_KEY && normalized.plans.today.length === 0) {
+        normalized.plans.today = normalized.dishes.filter(dish => dish.cooked).slice(0, 3).map(dish => dish.id);
+      }
+      return normalized;
     } catch {
       try { localStorage.removeItem(key); } catch { /* Storage may be unavailable in private mode. */ }
     }
@@ -244,12 +293,27 @@ function loadState() {
 
 let state = loadState();
 let pendingImage = "";
+let pendingOriginalImage = "";
+let pendingCroppedImage = "";
+let pendingImageFit = "cover";
+let pendingDishware = "plate";
+let pendingDishwarePattern = DISHWARE_PATTERNS.plate[0].id;
+let pendingDishwarePatternByType = {
+  plate: DISHWARE_PATTERNS.plate[0].id,
+  bowl: DISHWARE_PATTERNS.bowl[0].id
+};
+let cropState = null;
+let cropGesture = null;
+let cropSheetScrollTop = 0;
+const cropPointers = new Map();
 let recipeOptions = { dishId: "", template: "sun", ratio: "long" };
+let turntableRotation = 0;
 let bgmContext = null;
 let bgmTimer = null;
 let bgmStep = 0;
 
 const app = document.querySelector("#appContent");
+const appShell = document.querySelector("#appShell");
 const sheet = document.querySelector("#bottomSheet");
 const sheetBody = document.querySelector("#sheetBody");
 const backdrop = document.querySelector("#sheetBackdrop");
@@ -268,10 +332,28 @@ function getDish(id) {
   return state.dishes.find(dish => dish.id === id);
 }
 
+function dishwareClass(dish) {
+  return dish?.dishware === "bowl" ? "is-bowl" : "is-plate";
+}
+
+function dishwarePatternClass(dish) {
+  return `pattern-${resolveDishwarePattern(dish?.dishware, dish?.dishwarePattern).id}`;
+}
+
 function media(dish, extraClass = "") {
-  if (safeImage(dish?.image)) return `<img class="dish-photo ${extraClass}" src="${dish.image}" alt="${escapeHtml(dish.name)}">`;
+  if (safeImage(dish?.image)) return `<span class="dish-photo ${dishwareClass(dish)} ${dishwarePatternClass(dish)} ${extraClass}"><img class="${dish.imageFit === "contain" ? "is-original" : ""}" src="${dish.image}" alt="${escapeHtml(dish.name)}"></span>`;
   const colors = dish?.colors || [];
-  return `<span class="plate ${extraClass}" style="--food1:${safeColor(colors[0], "#dba91e")};--food2:${safeColor(colors[1], "#63358a")}" aria-hidden="true"></span>`;
+  return `<span class="plate ${dishwareClass(dish)} ${dishwarePatternClass(dish)} ${extraClass}" style="--food1:${safeColor(colors[0], "#dba91e")};--food2:${safeColor(colors[1], "#63358a")}" aria-hidden="true"></span>`;
+}
+
+function turntableDish(dish, position, selectedId) {
+  const colors = dish?.colors || [];
+  const style = `--food1:${safeColor(colors[0], "#dba91e")};--food2:${safeColor(colors[1], "#63358a")}`;
+  const photo = safeImage(dish?.image)
+    ? `<img class="turntable-photo ${dish.imageFit === "contain" ? "is-original" : ""}" src="${dish.image}" alt="">`
+    : `<span class="turntable-food" aria-hidden="true"></span>`;
+  const selected = dish.id === selectedId;
+  return `<button type="button" class="turntable-dish ${position} ${selected ? "is-selected" : ""}" data-action="select-menu" data-id="${dish.id}" aria-label="选择${escapeHtml(dish.name)}" aria-pressed="${selected}"><span class="turntable-plate ${dishwareClass(dish)} ${dishwarePatternClass(dish)}" style="${style}">${photo}</span></button>`;
 }
 
 function bookDoodle() {
@@ -318,20 +400,32 @@ function renderMealPlan(day, title, subtitle) {
 }
 
 function renderHome() {
+  const today = state.plans.today.map(getDish).filter(Boolean);
+  const tomorrow = state.plans.tomorrow.map(getDish).filter(Boolean);
+  const tomorrowDish = tomorrow[0];
   return `
     <section class="page" aria-labelledby="homeTitle">
       <div class="brand-row">
-        <div><p class="eyebrow">黄大厨专属菜谱</p><p class="date-line">${formatDayLabel()}</p></div>
+        <div><p class="eyebrow">爆牛专属</p><p class="date-line">${formatDayLabel()}</p></div>
         <button class="icon-button" data-action="share-kitchen" aria-label="分享今日菜单">${shareIcon()}</button>
       </div>
       <h1 class="sr-only" id="homeTitle">今日食谱</h1>
       <div class="hero-doodle">${bookDoodle()}</div>
-      <div class="segmented" role="group" aria-label="随机菜品来源">
-        <button class="pill ${state.menuMode === "wanted" ? "is-active" : ""}" data-action="mode" data-value="wanted">我想吃的</button>
-        <button class="pill ${state.menuMode === "cooked" ? "is-active" : ""}" data-action="mode" data-value="cooked">我烧过的</button>
+      <div class="segmented home-segmented" role="group" aria-label="随机菜品来源">
+        <button class="pill ${state.menuMode === "wanted" ? "is-active" : ""}" data-action="mode" data-value="wanted">✦ 我想吃的</button>
+        <button class="pill ${state.menuMode === "cooked" ? "is-active" : ""}" data-action="mode" data-value="cooked">♧ 我烧过的</button>
       </div>
-      ${renderMealPlan("today", "今日食谱", "今天认真吃一顿")}
-      ${renderMealPlan("tomorrow", "明日食谱", "先把明天安排好")}
+      <div class="section-heading"><div><h2 class="section-title">今日食谱</h2><p class="section-subtitle">今天认真吃一顿</p></div><button class="text-button" data-action="random-plan" data-day="today">加一道</button></div>
+      ${today.length ? `<div class="meal-scroll">${today.map(dish => `<button class="dish-card" data-action="dish-detail" data-id="${dish.id}">${media(dish)}<span class="dish-name">${escapeHtml(dish.name)}</span></button>`).join("")}</div>` : `<button class="empty-meal" data-action="random-plan" data-day="today">点我安排今天第一道菜</button>`}
+      <div class="section-heading tomorrow-heading"><div><h2 class="section-title">明日食谱</h2><p class="section-subtitle">先把明天安排好</p></div>${tomorrow.length > 1 ? `<span class="plan-count">共 ${tomorrow.length} 道</span>` : ""}</div>
+      <article class="tomorrow-card">
+        ${tomorrowDish ? media(tomorrowDish) : `<span class="empty-plate" aria-hidden="true">?</span>`}
+        <div class="tomorrow-actions">
+          <strong>${tomorrowDish ? escapeHtml(tomorrowDish.name) : "明天吃什么？"}</strong>
+          <button class="soft-button" data-action="random-tomorrow">帮我想道菜</button>
+          ${tomorrowDish ? `<button class="text-button tomorrow-detail" data-action="dish-detail" data-id="${tomorrowDish.id}">查看菜谱</button>` : ""}
+        </div>
+      </article>
     </section>`;
 }
 
@@ -345,8 +439,10 @@ function renderFridge() {
   const sorted = [...state.stock].sort((a, b) => remainingDays(a.expiry) - remainingDays(b.expiry));
   return `
     <section class="page" aria-labelledby="fridgeTitle">
-      <div class="top-row"><div><p class="eyebrow">冰箱</p><h1 class="page-title" id="fridgeTitle">你好像又忘了什么…</h1></div><button class="primary-button compact-button" data-action="restock">补货</button></div>
+      <p class="eyebrow">冰箱</p><h1 class="page-title" id="fridgeTitle">你好像又忘了什么…</h1>
       <div class="fridge-illustration">${fridgeDoodle()}</div>
+      <button class="primary-button block-button restock-button" data-action="restock">给小冰补货</button>
+      <h2 class="section-title fridge-section-title">还能吃的菜</h2>
       ${sorted.length ? `<div class="stock-list">${sorted.map(item => {
         const days = remainingDays(item.expiry);
         const tone = days < 0 ? "expired" : days <= 3 ? "soon" : "";
@@ -364,19 +460,19 @@ function renderMenu() {
   const visible = visibleDishes();
   const selected = visible.find(dish => dish.id === state.selectedDish) || visible[0];
   if (selected) state.selectedDish = selected.id;
+  const turntableDishes = selected
+    ? [selected, ...visible.filter(dish => dish.id !== selected.id)].slice(0, 3)
+    : [];
+  const positions = ["p1", "p2", "p3"];
   return `
     <section class="page" aria-labelledby="menuTitle">
       <div class="top-row">
-        <div><p class="eyebrow">${state.menuMode === "cooked" ? "已有菜单" : "心愿菜单"}</p><h1 class="page-title" id="menuTitle">${state.menuMode === "cooked" ? "这就是我的实力！" : "食神啊，赋予我力量吧！"}</h1></div>
-        <button class="icon-button" data-action="add-dish" aria-label="新增菜品">＋</button>
+        <div><p class="eyebrow">${state.menuMode === "cooked" ? "已有菜单" : "心愿菜单"}</p><h1 class="page-title" id="menuTitle">${state.menuMode === "cooked" ? "这就是…我的实力吗！" : "食神啊…赋予我力量吧！"}</h1></div>
+        <button class="header-action menu-switch" data-action="toggle-menu"><span class="spark">✦</span>${state.menuMode === "cooked" ? "想吃的菜" : "烧过的菜"}</button>
       </div>
-      <div class="segmented" role="group" aria-label="菜单分组">
-        <button class="pill ${state.menuMode === "cooked" ? "is-active" : ""}" data-action="mode" data-value="cooked">烧过的菜</button>
-        <button class="pill ${state.menuMode === "wanted" ? "is-active" : ""}" data-action="mode" data-value="wanted">想吃的菜</button>
-      </div>
-      <div class="filter-row"><strong>餐桌</strong><select class="filter-select" id="categoryFilter" aria-label="按分类筛选"><option>全部</option>${CATEGORIES.map(category => `<option ${category === state.categoryFilter ? "selected" : ""}>${category}</option>`).join("")}</select></div>
-      ${visible.length ? `<div class="dish-list">${visible.map(dish => `<button class="menu-card ${dish.id === state.selectedDish ? "is-selected" : ""}" data-action="select-menu" data-id="${dish.id}">${media(dish)}<span class="menu-copy"><strong>${escapeHtml(dish.name)}</strong><span>${escapeHtml(dish.category)} · ${dish.tags.length ? escapeHtml(dish.tags.join(" / ")) : dish.cooked ? "烧过" : "想吃"}</span></span><span class="menu-arrow" aria-hidden="true">›</span></button>`).join("")}</div>
-      <div class="menu-actions"><button class="primary-button" data-action="arrange" ${selected ? "" : "disabled"}>安排</button><button class="soft-button" data-action="edit-dish" ${selected ? "" : "disabled"}>编辑</button><button class="soft-button" data-action="recipe" ${selected ? "" : "disabled"}>菜谱图</button></div>` : `<div class="empty-state"><p>这里还空空的，新增一道菜吧。</p><button class="primary-button" data-action="add-dish">新增菜品</button></div>`}
+      <div class="filter-row menu-filter"><strong>餐桌</strong><select class="filter-select" id="categoryFilter" aria-label="按分类筛选"><option>全部</option>${CATEGORIES.map(category => `<option ${category === state.categoryFilter ? "selected" : ""}>${category}</option>`).join("")}</select></div>
+      ${visible.length ? `<div class="menu-stage"><div class="menu-list">${visible.map(dish => `<button class="menu-item ${dish.id === state.selectedDish ? "is-selected" : ""}" data-action="select-menu" data-id="${dish.id}" aria-pressed="${dish.id === state.selectedDish}"><span>${escapeHtml(dish.name)}</span><small>${escapeHtml(dish.category)}</small></button>`).join("")}</div><div class="platter" style="--turntable-angle:${turntableRotation}deg;--counter-angle:${-turntableRotation}deg" aria-label="菜品转盘">${turntableDishes.map((dish, index) => turntableDish(dish, positions[index], state.selectedDish)).join("")}<button type="button" class="turntable-spin" data-action="spin-turntable" aria-label="转动转盘" title="转动转盘">↻</button></div></div>
+      <div class="menu-actions first-edition-actions"><button class="soft-button" data-action="add-dish">＋ 新增</button><button class="primary-button" data-action="arrange">安排！</button><button class="soft-button" data-action="edit-dish">编辑</button><button class="soft-button" data-action="move-dish">${state.menuMode === "cooked" ? "移到想吃" : "标为烧过"}</button><button class="soft-button recipe-action" data-action="recipe">生成菜谱图</button></div>` : `<div class="empty-state menu-empty"><p>这里还空空的，新增一道吧。</p><button class="primary-button" data-action="add-dish">＋ 新增菜品</button></div>`}
     </section>`;
 }
 
@@ -396,16 +492,17 @@ function renderProfile() {
   const expiredPercent = state.stock.length ? Math.round(expired / state.stock.length * 100) : 0;
   return `
     <section class="page" aria-labelledby="profileTitle">
-      <div class="profile-hero">
-        <div class="top-row"><div class="report-feature"><span class="avatar" aria-hidden="true">${escapeHtml(state.profileName.slice(0, 1))}</span><div><p class="eyebrow">我的</p><h1 class="page-title" id="profileTitle">今天有好好吃饭吗？</h1><p class="date-line">${escapeHtml(state.profileName)}的厨房</p></div></div><button class="text-button" data-action="edit-profile">编辑</button></div>
-      </div>
+      <div class="top-row"><div><p class="eyebrow">${escapeHtml(state.profileName)}的厨房</p><h1 class="page-title" id="profileTitle">本周回顾</h1></div><button class="header-action about-action" data-action="about"><span>ⓘ</span>统计说明</button></div>
       <article class="report-card">
         <h2>本周大吃货总结！</h2>
+        <h3>最喜欢吃什么？</h3>
         <div class="report-feature">${media(favorite)}<div><strong class="report-number">${weekly.length}</strong><span>次饮食记录</span></div></div>
         <p class="report-copy">${weekly.length ? `最常出现的是「${escapeHtml(favorite.name)}」，本周吃过 ${distinct} 道不同的菜。` : "本周还没有归档的食谱，安排一道今日菜谱就会留下记录。"}</p>
+        <h3>这周也在好好吃饭吗？</h3>
         <div class="stat-grid"><div class="stat"><strong>${state.totalCooked}</strong><span>累计记录</span></div><div class="stat"><strong>${state.dishes.length}</strong><span>菜单总数</span></div><div class="stat"><strong>${expiredPercent}%</strong><span>过期占比</span></div></div>
       </article>
       <div class="settings" aria-label="厨房设置">
+        <div class="settings-row"><span>个人信息</span><button class="soft-button compact-button" data-action="edit-profile">编辑昵称</button></div>
         <div class="settings-row"><span>分享与保存</span><span class="settings-actions"><button class="soft-button compact-button" data-action="share-kitchen">分享</button><button class="soft-button compact-button" data-action="save-report">保存周报</button></span></div>
         <div class="settings-row"><span>背景音乐</span><label class="toggle"><input id="bgmToggle" type="checkbox" ${state.settings.bgm ? "checked" : ""} aria-label="开启背景音乐"><span aria-hidden="true"></span></label></div>
         <div class="settings-row"><span>音乐风格</span><span class="settings-actions"><button class="chip ${state.settings.bgmMode === "sunny" ? "is-selected" : ""}" data-action="bgm-mode" data-value="sunny">明亮</button><button class="chip ${state.settings.bgmMode === "violet" ? "is-selected" : ""}" data-action="bgm-mode" data-value="violet">安静</button></span></div>
@@ -436,6 +533,7 @@ function showToast(message) {
 
 function openSheet(markup) {
   sheetBody.innerHTML = markup;
+  sheet.classList.toggle("dish-editor-sheet", Boolean(sheetBody.querySelector("#dishForm")));
   sheet.hidden = false;
   backdrop.hidden = false;
   document.body.style.overflow = "hidden";
@@ -443,34 +541,361 @@ function openSheet(markup) {
 }
 
 function closeSheet() {
+  const detachedCropper = appShell.querySelector(":scope > #photoCropper");
+  if (detachedCropper) detachedCropper.remove();
   sheet.hidden = true;
   backdrop.hidden = true;
   document.body.style.overflow = "";
   sheetBody.innerHTML = "";
+  sheet.classList.remove("dish-editor-sheet");
+  sheet.classList.remove("is-cropping");
+  pendingOriginalImage = "";
+  pendingCroppedImage = "";
+  pendingImageFit = "cover";
+  pendingDishware = "plate";
+  pendingDishwarePattern = DISHWARE_PATTERNS.plate[0].id;
+  pendingDishwarePatternByType = {
+    plate: DISHWARE_PATTERNS.plate[0].id,
+    bowl: DISHWARE_PATTERNS.bowl[0].id
+  };
+  cropState = null;
+  cropGesture = null;
+  cropSheetScrollTop = 0;
+  cropPointers.clear();
+}
+
+function dishPhotoPreviewMarkup() {
+  const photo = safeImage(pendingImage);
+  const dishwareName = pendingDishware === "bowl" ? "碗" : "盘子";
+  return `
+    <span class="portrait-plate-inner ${pendingDishware === "bowl" ? "is-bowl" : "is-plate"} pattern-${pendingDishwarePattern}">
+      ${photo ? `<img class="${pendingImageFit === "contain" ? "is-original" : ""}" src="${photo}" alt="菜品照片预览">` : `<span class="portrait-placeholder" aria-hidden="true">＋</span>`}
+    </span>
+    <span class="portrait-caption">${photo ? `点${dishwareName}调整照片` : `添加照片后在${dishwareName}中预览`}</span>`;
+}
+
+function dishTagMarkup(tags) {
+  return tags.map(tag => `<button type="button" class="tag-chip" data-action="remove-tag" data-tag-value="${escapeHtml(tag)}" aria-label="移除标签 ${escapeHtml(tag)}"><span>${escapeHtml(tag)}</span><b aria-hidden="true">×</b></button>`).join("");
+}
+
+function dishwarePatternMarkup(dishware, selectedPattern) {
+  return DISHWARE_PATTERNS[dishware].map(pattern => `
+    <button type="button" class="dishware-pattern-option ${pattern.id === selectedPattern ? "is-selected" : ""}" data-dishware-pattern="${pattern.id}" aria-label="${pattern.name}" title="${pattern.name}" aria-pressed="${pattern.id === selectedPattern}">
+      <span class="dishware-pattern-swatch ${dishware === "bowl" ? "is-bowl" : "is-plate"} pattern-${pattern.id}" aria-hidden="true"><i></i></span>
+    </button>`).join("");
 }
 
 function dishForm(dish = {}) {
   pendingImage = safeImage(dish.image);
+  pendingOriginalImage = pendingImage;
+  pendingCroppedImage = pendingImage;
+  pendingImageFit = dish.imageFit === "contain" ? "contain" : "cover";
+  pendingDishware = dish.dishware === "bowl" ? "bowl" : "plate";
+  pendingDishwarePattern = resolveDishwarePattern(pendingDishware, dish.dishwarePattern).id;
+  pendingDishwarePatternByType = {
+    plate: pendingDishware === "plate" ? pendingDishwarePattern : DISHWARE_PATTERNS.plate[0].id,
+    bowl: pendingDishware === "bowl" ? pendingDishwarePattern : DISHWARE_PATTERNS.bowl[0].id
+  };
   const id = escapeHtml(dish.id || "");
   const selectedCategory = CATEGORIES.includes(dish.category) ? dish.category : "主菜";
+  const cooked = dish.id ? dish.cooked !== false : state.menuMode === "cooked";
+  const destination = cooked ? "已有菜单" : "想吃的菜";
+  const tags = normalizeStringList(dish.tags, 8).map(tag => tag.slice(0, 16));
   const ingredients = escapeHtml((dish.ingredients || []).join("\n"));
   const steps = escapeHtml((dish.steps || []).join("\n"));
   return `
-    <h2 class="sheet-title" id="sheetTitle">${dish.id ? "编辑菜品" : "新增菜品"}</h2>
-    <p class="sheet-subtitle">把菜名、食材、做法和照片一次记完整。</p>
-    <form id="dishForm">
+    <div class="dish-editor-heading">
+      <p class="dish-editor-context">${escapeHtml(destination)}</p>
+      <h2 class="sheet-title" id="sheetTitle">${dish.id ? `编辑${destination}` : `新增到${destination}`}</h2>
+      <p class="sheet-subtitle">${dish.id ? "把这道菜再完善一点。" : "厨艺 +1，今天我又变强了！"}</p>
+    </div>
+    <form id="dishForm" class="dish-editor-form">
       <input type="hidden" name="dishId" value="${id}">
-      <div class="field"><label for="dishName">菜的名字 *</label><input id="dishName" name="dishName" value="${escapeHtml(dish.name || "")}" maxlength="24" required placeholder="例如：青椒炒牛肉"></div>
-      <div class="field"><label>分类 *</label><div class="chip-row">${CATEGORIES.map(category => `<button type="button" class="chip ${category === selectedCategory ? "is-selected" : ""}" data-category="${category}">${category}</button>`).join("")}</div><input type="hidden" name="category" value="${selectedCategory}"></div>
-      <div class="field"><label for="dishTags">我的标签</label><input id="dishTags" name="tags" value="${escapeHtml((dish.tags || []).join("，"))}" maxlength="140" placeholder="例如：快手菜，周末"><p class="field-hint">用逗号分隔，最多保留 8 个。</p></div>
-      <div class="field"><label>放进哪里</label><div class="chip-row"><button type="button" class="chip ${dish.cooked !== false ? "is-selected" : ""}" data-cooked="true">我烧过的</button><button type="button" class="chip ${dish.cooked === false ? "is-selected" : ""}" data-cooked="false">我想吃的</button></div><input type="hidden" name="cooked" value="${dish.cooked === false ? "false" : "true"}"></div>
-      <div class="field"><label for="recipeUrl">菜谱链接（可选）</label><input id="recipeUrl" name="recipeUrl" type="url" value="${escapeHtml(dish.recipeUrl || "")}" maxlength="500" placeholder="https://"><p class="field-hint">仅接受 http / https 链接。</p></div>
-      <div class="field"><label for="ingredients">食材</label><textarea id="ingredients" name="ingredients" maxlength="1600" placeholder="每行一种食材">${ingredients}</textarea></div>
-      <div class="field"><label for="steps">做法</label><textarea id="steps" name="steps" maxlength="2600" placeholder="每行一个步骤">${steps}</textarea></div>
-      <div class="field"><label for="dishNote">备注</label><textarea id="dishNote" name="note" maxlength="240" placeholder="口味、火候或想和谁一起吃">${escapeHtml(dish.note || "")}</textarea></div>
-      <div class="field"><label>菜的肖像</label><div class="file-actions"><label class="file-button" for="dishCamera">拍照</label><label class="file-button" for="dishGallery">从相册添加</label></div><input class="sr-only" id="dishCamera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-image-input><input class="sr-only" id="dishGallery" type="file" accept="image/jpeg,image/png,image/webp" data-image-input><div class="image-preview" id="imagePreview">${pendingImage ? `<img src="${pendingImage}" alt="菜品预览">` : "还没有照片"}</div></div>
-      <button class="primary-button block-button" type="submit">保存菜品</button>
+      <input type="hidden" name="category" value="${selectedCategory}">
+      <input type="hidden" name="cooked" value="${cooked}">
+      <input type="hidden" name="dishware" value="${pendingDishware}">
+      <input type="hidden" name="dishwarePattern" value="${pendingDishwarePattern}">
+      <input type="hidden" id="dishTags" name="tags" value="${escapeHtml(tags.join("，"))}">
+
+      <div class="dish-form-tabs" role="tablist" aria-label="菜品信息分类">
+        <button type="button" class="dish-form-tab is-active" data-form-tab="basic" role="tab" aria-selected="true" aria-controls="dishBasicPanel">基本信息</button>
+        <button type="button" class="dish-form-tab" data-form-tab="recipe" role="tab" aria-selected="false" aria-controls="dishRecipePanel">菜谱信息</button>
+      </div>
+
+      <section class="dish-form-panel" id="dishBasicPanel" data-form-panel="basic" role="tabpanel">
+        <div class="field"><label for="dishName">菜的名字 *</label><input id="dishName" name="dishName" value="${escapeHtml(dish.name || "")}" maxlength="24" required placeholder="例如：青椒炒牛肉"></div>
+        <div class="field"><label>分类 *</label><div class="chip-row category-chips">${CATEGORIES.map(category => `<button type="button" class="chip ${category === selectedCategory ? "is-selected" : ""}" data-category="${category}">${category}</button>`).join("")}</div></div>
+
+        <div class="field tag-field">
+          <div class="field-title-row"><label>我的标签</label><button type="button" class="text-button add-tag-button" data-action="add-tag">＋ 新建</button></div>
+          <div class="tag-list" id="dishTagList">${dishTagMarkup(tags)}</div>
+          <div class="tag-composer" id="tagComposer" hidden><input id="newTagInput" maxlength="16" placeholder="输入新标签" aria-label="新标签"><button type="button" class="soft-button compact-button" data-action="confirm-tag">添加</button></div>
+        </div>
+
+        <div class="field portrait-field">
+          <label>菜的肖像</label>
+          <div class="file-actions portrait-actions"><label class="file-button" for="dishGallery">从相册添加</label><label class="file-button" for="dishCamera">拍照</label></div>
+          <input class="sr-only" id="dishGallery" type="file" accept="image/jpeg,image/png,image/webp" data-image-input>
+          <input class="sr-only" id="dishCamera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-image-input>
+          <label class="original-photo-toggle"><input id="useOriginalPhoto" type="checkbox" ${pendingImageFit === "contain" ? "checked" : ""} ${pendingImage ? "" : "disabled"}><span aria-hidden="true"></span>使用原图</label>
+          <div class="dishware-picker">
+            <div class="field-title-row"><label id="dishwareTitle">${pendingDishware === "bowl" ? "碗" : "盘子"}</label><span class="dishware-help">选择餐具</span></div>
+            <div class="dishware-options" role="group" aria-label="选择盘子或碗">
+              <button type="button" class="dishware-option ${pendingDishware === "plate" ? "is-selected" : ""}" data-dishware="plate" aria-pressed="${pendingDishware === "plate"}"><span class="dishware-sample sample-plate pattern-plate-sunburst" aria-hidden="true"><i></i></span><b>盘子</b></button>
+              <button type="button" class="dishware-option ${pendingDishware === "bowl" ? "is-selected" : ""}" data-dishware="bowl" aria-pressed="${pendingDishware === "bowl"}"><span class="dishware-sample sample-bowl pattern-bowl-lotus" aria-hidden="true"><i></i></span><b>碗</b></button>
+            </div>
+            <div class="field-title-row dishware-pattern-heading"><label>花纹</label><span class="dishware-help">10 款</span></div>
+            <div class="dishware-pattern-grid" id="dishwarePatternGrid" role="group" aria-label="选择餐具花纹">${dishwarePatternMarkup(pendingDishware, pendingDishwarePattern)}</div>
+          </div>
+          <button type="button" class="portrait-plate" id="imagePreview" data-action="open-crop" ${pendingImage ? "" : "disabled"}>${dishPhotoPreviewMarkup()}</button>
+        </div>
+
+        <div class="field note-field"><label for="dishNote">备注</label><textarea id="dishNote" name="note" maxlength="300" placeholder="例如：口味、搭配建议，或下次想调整的">${escapeHtml(dish.note || "")}</textarea><p class="character-count"><span id="dishNoteCount">${String(dish.note || "").length}</span> / 300</p></div>
+      </section>
+
+      <section class="dish-form-panel" id="dishRecipePanel" data-form-panel="recipe" role="tabpanel" hidden>
+        <div class="field"><label for="recipeUrl">菜谱链接（可选）</label><input id="recipeUrl" name="recipeUrl" type="url" value="${escapeHtml(dish.recipeUrl || "")}" maxlength="500" placeholder="https://"><p class="field-hint">仅接受 http / https 链接。</p></div>
+        <div class="field"><label for="ingredients">食材</label><textarea id="ingredients" name="ingredients" maxlength="1600" placeholder="每行一种食材">${ingredients}</textarea></div>
+        <div class="field"><label for="steps">做法</label><textarea id="steps" name="steps" maxlength="2600" placeholder="每行一个步骤">${steps}</textarea></div>
+      </section>
+
+      <div class="dish-editor-footer"><button class="primary-button block-button" type="submit">${dish.id ? "保存修改" : `加入${destination}`}</button></div>
+
+      <div class="photo-cropper" id="photoCropper" hidden aria-label="裁切菜品照片">
+        <div class="cropper-header"><button type="button" class="cropper-back" data-action="crop-cancel" aria-label="返回" title="返回">‹</button><h3>裁切菜品照片</h3><button type="button" class="cropper-use" data-action="crop-confirm">使用照片</button></div>
+        <div class="cropper-stage"><div class="crop-viewport" id="cropViewport"><img id="cropImage" alt="待裁切的菜品照片" draggable="false"><span class="crop-guide" aria-hidden="true"></span></div></div>
+        <div class="cropper-zoom"><button type="button" data-action="crop-zoom" data-value="-0.1" aria-label="缩小照片" title="缩小照片">−</button><input id="cropZoom" type="range" min="1" max="3" step="0.01" value="1" aria-label="照片缩放"><button type="button" data-action="crop-zoom" data-value="0.1" aria-label="放大照片" title="放大照片">＋</button></div>
+        <p class="cropper-hint">拖动调整位置，双指缩放照片</p>
+      </div>
     </form>`;
+}
+
+function dishTagsFromForm(form = document.querySelector("#dishForm")) {
+  return form ? normalizeStringList(String(form.elements.tags.value || "").split(/[,，、\n]/), 8).map(tag => tag.slice(0, 16)) : [];
+}
+
+function renderDishTags(form = document.querySelector("#dishForm")) {
+  if (!form) return;
+  const tags = dishTagsFromForm(form);
+  form.elements.tags.value = tags.join("，");
+  form.querySelector("#dishTagList").innerHTML = dishTagMarkup(tags);
+}
+
+function addDishTag() {
+  const form = document.querySelector("#dishForm");
+  const input = form?.querySelector("#newTagInput");
+  if (!form || !input) return;
+  const tag = cleanText(input.value, 16);
+  const tags = dishTagsFromForm(form);
+  if (!tag) return showToast("请输入标签");
+  if (tags.includes(tag)) return showToast("这个标签已经有了");
+  if (tags.length >= 8) return showToast("最多添加 8 个标签");
+  tags.push(tag);
+  form.elements.tags.value = tags.join("，");
+  input.value = "";
+  renderDishTags(form);
+  form.querySelector("#tagComposer").hidden = true;
+}
+
+function refreshDishPhotoPreview() {
+  const preview = document.querySelector("#imagePreview");
+  const originalToggle = document.querySelector("#useOriginalPhoto");
+  if (!preview || !originalToggle) return;
+  preview.innerHTML = dishPhotoPreviewMarkup();
+  preview.disabled = !safeImage(pendingImage);
+  originalToggle.disabled = !safeImage(pendingOriginalImage);
+  originalToggle.checked = pendingImageFit === "contain";
+  const title = document.querySelector("#dishwareTitle");
+  if (title) title.textContent = pendingDishware === "bowl" ? "碗" : "盘子";
+}
+
+function refreshDishwarePicker(form = document.querySelector("#dishForm")) {
+  if (!form) return;
+  form.elements.dishware.value = pendingDishware;
+  form.elements.dishwarePattern.value = pendingDishwarePattern;
+  form.querySelectorAll("[data-dishware]").forEach(option => {
+    const selected = option.dataset.dishware === pendingDishware;
+    option.classList.toggle("is-selected", selected);
+    option.setAttribute("aria-pressed", String(selected));
+  });
+  const grid = form.querySelector("#dishwarePatternGrid");
+  if (grid) grid.innerHTML = dishwarePatternMarkup(pendingDishware, pendingDishwarePattern);
+  refreshDishPhotoPreview();
+}
+
+function clampCropOffsets() {
+  if (!cropState) return;
+  const width = cropState.imageWidth * cropState.baseScale * cropState.zoom;
+  const height = cropState.imageHeight * cropState.baseScale * cropState.zoom;
+  cropState.x = Math.max(-(width - cropState.viewportSize) / 2, Math.min((width - cropState.viewportSize) / 2, cropState.x));
+  cropState.y = Math.max(-(height - cropState.viewportSize) / 2, Math.min((height - cropState.viewportSize) / 2, cropState.y));
+}
+
+function renderCropTransform() {
+  const image = document.querySelector("#cropImage");
+  if (!image || !cropState) return;
+  clampCropOffsets();
+  image.style.width = `${cropState.imageWidth * cropState.baseScale * cropState.zoom}px`;
+  image.style.height = `${cropState.imageHeight * cropState.baseScale * cropState.zoom}px`;
+  image.style.transform = `translate(calc(-50% + ${cropState.x}px), calc(-50% + ${cropState.y}px))`;
+  const zoom = document.querySelector("#cropZoom");
+  if (zoom) zoom.value = String(cropState.zoom);
+}
+
+function setCropZoom(value) {
+  if (!cropState) return;
+  cropState.zoom = Math.max(1, Math.min(3, Number(value) || 1));
+  renderCropTransform();
+}
+
+function initializePhotoCropper() {
+  const viewport = document.querySelector("#cropViewport");
+  const image = document.querySelector("#cropImage");
+  if (!viewport || !image || !image.naturalWidth || !image.naturalHeight) return;
+  const viewportSize = viewport.getBoundingClientRect().width || 300;
+  cropState = {
+    imageWidth: image.naturalWidth,
+    imageHeight: image.naturalHeight,
+    viewportSize,
+    baseScale: Math.max(viewportSize / image.naturalWidth, viewportSize / image.naturalHeight),
+    zoom: 1,
+    x: 0,
+    y: 0
+  };
+  cropPointers.clear();
+  cropGesture = null;
+  renderCropTransform();
+}
+
+function openPhotoCropper() {
+  const source = safeImage(pendingOriginalImage) || safeImage(pendingImage);
+  const cropper = document.querySelector("#photoCropper");
+  const image = document.querySelector("#cropImage");
+  if (!source || !cropper || !image) return showToast("请先添加一张照片");
+  cropSheetScrollTop = sheet.scrollTop;
+  sheet.classList.add("is-cropping");
+  appShell.append(cropper);
+  cropper.hidden = false;
+  image.onload = () => requestAnimationFrame(initializePhotoCropper);
+  image.src = source;
+  if (image.complete) requestAnimationFrame(initializePhotoCropper);
+}
+
+function closePhotoCropper() {
+  const cropper = document.querySelector("#photoCropper");
+  if (cropper) cropper.hidden = true;
+  const form = document.querySelector("#dishForm");
+  if (cropper && form) form.append(cropper);
+  sheet.classList.remove("is-cropping");
+  sheet.scrollTop = cropSheetScrollTop;
+  cropState = null;
+  cropGesture = null;
+  cropPointers.clear();
+}
+
+function cropPhotoToSquare() {
+  const image = document.querySelector("#cropImage");
+  if (!image || !cropState) return "";
+  const renderedScale = cropState.baseScale * cropState.zoom;
+  const sourceSize = cropState.viewportSize / renderedScale;
+  const sourceX = Math.max(0, Math.min(cropState.imageWidth - sourceSize, (cropState.imageWidth - sourceSize) / 2 - cropState.x / renderedScale));
+  const sourceY = Math.max(0, Math.min(cropState.imageHeight - sourceSize, (cropState.imageHeight - sourceSize) / 2 - cropState.y / renderedScale));
+  const canvas = document.createElement("canvas");
+  canvas.width = 720;
+  canvas.height = 720;
+  const context = canvas.getContext("2d");
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, sourceX, sourceY, sourceSize, sourceSize, 0, 0, canvas.width, canvas.height);
+  let result = canvas.toDataURL("image/jpeg", 0.82);
+  if (result.length > 900000) result = canvas.toDataURL("image/jpeg", 0.68);
+  return safeImage(result);
+}
+
+function cropPointDistance(points) {
+  return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+}
+
+function cropPointCenter(points) {
+  return { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 };
+}
+
+function restartCropGesture() {
+  const points = [...cropPointers.values()];
+  if (!cropState || !points.length) return cropGesture = null;
+  if (points.length === 1) {
+    cropGesture = { type: "drag", point: points[0], x: cropState.x, y: cropState.y };
+    return;
+  }
+  cropGesture = {
+    type: "pinch",
+    distance: Math.max(1, cropPointDistance(points)),
+    center: cropPointCenter(points),
+    zoom: cropState.zoom,
+    x: cropState.x,
+    y: cropState.y
+  };
+}
+
+function handleCropPointerDown(event) {
+  const viewport = event.target.closest("#cropViewport");
+  if (!viewport || !cropState) return;
+  event.preventDefault();
+  viewport.setPointerCapture?.(event.pointerId);
+  cropPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  restartCropGesture();
+}
+
+function handleCropPointerMove(event) {
+  if (!cropPointers.has(event.pointerId) || !cropState || !cropGesture) return;
+  event.preventDefault();
+  cropPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  const points = [...cropPointers.values()];
+  if (cropGesture.type === "pinch" && points.length >= 2) {
+    const center = cropPointCenter(points);
+    cropState.zoom = Math.max(1, Math.min(3, cropGesture.zoom * cropPointDistance(points) / cropGesture.distance));
+    cropState.x = cropGesture.x + center.x - cropGesture.center.x;
+    cropState.y = cropGesture.y + center.y - cropGesture.center.y;
+  } else if (cropGesture.type === "drag" && points.length === 1) {
+    cropState.x = cropGesture.x + points[0].x - cropGesture.point.x;
+    cropState.y = cropGesture.y + points[0].y - cropGesture.point.y;
+  }
+  renderCropTransform();
+}
+
+function handleCropPointerEnd(event) {
+  if (!cropPointers.has(event.pointerId)) return;
+  cropPointers.delete(event.pointerId);
+  restartCropGesture();
+}
+
+function handleCropperAction(actionTarget) {
+  const action = actionTarget?.dataset.action;
+  if (action === "open-crop") {
+    openPhotoCropper();
+    return true;
+  }
+  if (action === "crop-cancel") {
+    closePhotoCropper();
+    return true;
+  }
+  if (action === "crop-confirm") {
+    const cropped = cropPhotoToSquare();
+    if (!cropped) showToast("照片裁切失败，请重试");
+    else {
+      pendingCroppedImage = cropped;
+      pendingImage = cropped;
+      pendingImageFit = "cover";
+      closePhotoCropper();
+      refreshDishPhotoPreview();
+    }
+    return true;
+  }
+  if (action === "crop-zoom") {
+    setCropZoom((cropState?.zoom || 1) + Number(actionTarget.dataset.value || 0));
+    return true;
+  }
+  return false;
 }
 
 function stockForm() {
@@ -512,7 +937,7 @@ function dishDetail(dish) {
 function recipePreview(dish) {
   const templateClass = recipeOptions.template === "violet" ? "violet" : recipeOptions.template === "paper" ? "paper" : "";
   const ratioClass = recipeOptions.ratio === "wide" ? "is-wide" : "";
-  return `<article class="recipe-preview ${templateClass} ${ratioClass}"><h3>${escapeHtml(dish.name)}</h3><p class="recipe-date">${formatDayLabel()} · 黄大厨专属菜谱</p><h4>食材</h4>${dish.ingredients.length ? `<ul>${dish.ingredients.slice(0, 7).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>按自己的口味准备食材</p>"}<h4>做法</h4>${dish.steps.length ? `<ol>${dish.steps.slice(0, 6).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : "<p>把你的做法补充进来吧</p>"}</article>`;
+  return `<article class="recipe-preview ${templateClass} ${ratioClass}"><h3>${escapeHtml(dish.name)}</h3><p class="recipe-date">${formatDayLabel()} · 爆牛专属</p><h4>食材</h4>${dish.ingredients.length ? `<ul>${dish.ingredients.slice(0, 7).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>按自己的口味准备食材</p>"}<h4>做法</h4>${dish.steps.length ? `<ol>${dish.steps.slice(0, 6).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol>` : "<p>把你的做法补充进来吧</p>"}</article>`;
 }
 
 function recipeGenerator(dish) {
@@ -542,6 +967,10 @@ function profileForm() {
   return `<h2 class="sheet-title" id="sheetTitle">编辑个人信息</h2><p class="sheet-subtitle">给自己的厨房留一个称呼。</p><form id="profileForm"><div class="field"><label for="profileName">昵称 *</label><input id="profileName" name="profileName" value="${escapeHtml(state.profileName)}" maxlength="20" required></div><button class="primary-button block-button" type="submit">保存</button></form>`;
 }
 
+function aboutSheet() {
+  return `<h2 class="sheet-title" id="sheetTitle">统计说明</h2><p class="report-copy">把菜安排到今日食谱后，会计入本周记录。菜谱、照片、冰箱和统计只保存在当前浏览器中。</p><p class="field-hint">示例菜图来自 Wikimedia Commons，<a href="assets/food/ATTRIBUTION.md" target="_blank" rel="noreferrer">查看图片授权信息</a>。</p><button class="danger-button block-button" data-action="reset-data">重置体验数据</button>`;
+}
+
 function addPlan(day, dishId) {
   if (!getDish(dishId) || !["today", "tomorrow"].includes(day)) return false;
   const plan = state.plans[day];
@@ -556,6 +985,7 @@ function addPlan(day, dishId) {
 }
 
 function randomPlan(day) {
+  if (!["today", "tomorrow"].includes(day)) return showToast("日期不正确");
   const source = state.dishes.filter(dish => state.menuMode === "wanted" ? !dish.cooked : dish.cooked);
   const available = source.filter(dish => !state.plans[day].includes(dish.id));
   if (!available.length && source.length) return showToast("这一组菜都安排好啦");
@@ -565,6 +995,38 @@ function randomPlan(day) {
   if (!addPlan(day, dish.id)) return showToast("一天最多安排 8 道菜");
   render();
   showToast(`已为${day === "today" ? "今天" : "明天"}加入「${dish.name}」`);
+}
+
+function randomTomorrow() {
+  const source = state.dishes.filter(dish => state.menuMode === "wanted" ? !dish.cooked : dish.cooked);
+  const currentId = state.plans.tomorrow[0];
+  const choices = source.filter(dish => dish.id !== currentId);
+  const pool = choices.length ? choices : state.dishes.filter(dish => dish.id !== currentId);
+  const dish = pool[Math.floor(Math.random() * pool.length)];
+  if (!dish) return showToast("菜单还是空的，先新增一道菜吧");
+  const remaining = state.plans.tomorrow.slice(1).filter(id => id !== dish.id);
+  state.plans.tomorrow = [dish.id, ...remaining].slice(0, 8);
+  render();
+  showToast(`明天就吃「${dish.name}」吧`);
+}
+
+function spinTurntable() {
+  const platter = document.querySelector(".platter");
+  const dishButtons = [...document.querySelectorAll(".turntable-dish")];
+  if (!platter || dishButtons.length < 2) return showToast("再多记一道菜，转盘才转得起来");
+  turntableRotation += 120;
+  platter.style.setProperty("--turntable-angle", `${turntableRotation}deg`);
+  platter.style.setProperty("--counter-angle", `${-turntableRotation}deg`);
+  const currentIndex = Math.max(0, dishButtons.findIndex(button => button.dataset.id === state.selectedDish));
+  const nextButton = dishButtons[(currentIndex + 1) % dishButtons.length];
+  state.selectedDish = nextButton.dataset.id;
+  document.querySelectorAll(".menu-item, .turntable-dish").forEach(button => {
+    const selected = button.dataset.id === state.selectedDish;
+    button.classList.toggle("is-selected", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  saveState();
+  showToast(`转到「${getDish(state.selectedDish)?.name || "下一道菜"}」`);
 }
 
 async function shareText(title, text) {
@@ -656,7 +1118,9 @@ async function makeRecipeBlob(dish) {
     try {
       const image = await loadCanvasImage(dish.image);
       const imageHeight = wide ? 250 : 360;
-      const scale = Math.max(maxWidth / image.width, imageHeight / image.height);
+      const scale = dish.imageFit === "contain"
+        ? Math.min(maxWidth / image.width, imageHeight / image.height)
+        : Math.max(maxWidth / image.width, imageHeight / image.height);
       const width = image.width * scale;
       const height = image.height * scale;
       context.save();
@@ -675,7 +1139,7 @@ async function makeRecipeBlob(dish) {
   y = wrapCanvasText(context, dish.name, margin, y, maxWidth, wide ? 66 : 78, 2);
   context.globalAlpha = 0.72;
   context.font = `500 ${wide ? 23 : 28}px "Microsoft YaHei", sans-serif`;
-  context.fillText(`${formatDayLabel()} · 黄大厨专属菜谱`, margin, y + 8);
+  context.fillText(`${formatDayLabel()} · 爆牛专属`, margin, y + 8);
   context.globalAlpha = 1;
   y += wide ? 56 : 78;
   const drawSection = (title, items, ordered) => {
@@ -760,22 +1224,48 @@ async function importData(file) {
 }
 
 async function compressImage(file) {
-  if (!file || file.size > MAX_IMAGE_BYTES || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("请选择 5MB 以内的 JPG、PNG 或 WebP 图片");
-  let bitmap;
+  if (!file || file.size > MAX_IMAGE_BYTES || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw new Error("请选择 12MB 以内的 JPG、PNG 或 WebP 图片");
+  let source;
+  let width;
+  let height;
+  let cleanup = () => {};
   try {
-    bitmap = await createImageBitmap(file);
+    if (typeof createImageBitmap !== "function") throw new Error("bitmap-unavailable");
+    const bitmap = await createImageBitmap(file);
+    source = bitmap;
+    width = bitmap.width;
+    height = bitmap.height;
+    cleanup = () => bitmap.close();
   } catch {
-    throw new Error("图片内容无法识别");
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = await new Promise((resolve, reject) => {
+        const element = new Image();
+        element.onload = () => resolve(element);
+        element.onerror = reject;
+        element.src = objectUrl;
+      });
+      source = image;
+      width = image.naturalWidth;
+      height = image.naturalHeight;
+      cleanup = () => URL.revokeObjectURL(objectUrl);
+    } catch {
+      URL.revokeObjectURL(objectUrl);
+      throw new Error("图片内容无法识别");
+    }
   }
-  const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, 900 / Math.max(width, height));
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
   const context = canvas.getContext("2d");
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+  try {
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  } finally {
+    cleanup();
+  }
   const result = canvas.toDataURL("image/jpeg", 0.78);
   if (result.length > 900000) throw new Error("图片压缩后仍然太大，请换一张小图");
   return result;
@@ -835,8 +1325,15 @@ app.addEventListener("click", async event => {
     state.selectedDish = visibleDishes()[0]?.id || "";
     render();
   }
+  if (action === "toggle-menu") {
+    state.menuMode = state.menuMode === "cooked" ? "wanted" : "cooked";
+    state.selectedDish = visibleDishes()[0]?.id || "";
+    render();
+  }
   if (action === "random-plan") randomPlan(target.dataset.day);
-  if (action === "share-kitchen") await shareText("黄大厨专属菜谱", kitchenShareText());
+  if (action === "random-tomorrow") randomTomorrow();
+  if (action === "spin-turntable") spinTurntable();
+  if (action === "share-kitchen") await shareText("爆牛专属", kitchenShareText());
   if (action === "dish-detail") {
     const dish = getDish(target.dataset.id);
     if (dish) openSheet(dishDetail(dish));
@@ -861,6 +1358,16 @@ app.addEventListener("click", async event => {
       openSheet(recipeGenerator(dish));
     }
   }
+  if (action === "move-dish") {
+    const dish = getDish(state.selectedDish) || visibleDishes()[0];
+    if (!dish) return showToast("先新增一道菜吧");
+    dish.cooked = !dish.cooked;
+    const destination = dish.cooked ? "我烧过的" : "我想吃的";
+    state.selectedDish = visibleDishes()[0]?.id || "";
+    render();
+    showToast(`已移到「${destination}」`);
+  }
+  if (action === "about") openSheet(aboutSheet());
   if (action === "edit-profile") openSheet(profileForm());
   if (action === "bgm-mode") {
     state.settings.bgmMode = target.dataset.value === "violet" ? "violet" : "sunny";
@@ -906,10 +1413,34 @@ app.addEventListener("change", async event => {
 });
 
 sheet.addEventListener("click", async event => {
+  const formTab = event.target.closest("[data-form-tab]");
+  if (formTab) {
+    const form = formTab.closest("form");
+    form.querySelectorAll("[data-form-tab]").forEach(tab => {
+      const active = tab === formTab;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    form.querySelectorAll("[data-form-panel]").forEach(panel => panel.hidden = panel.dataset.formPanel !== formTab.dataset.formTab);
+  }
+  const dishware = event.target.closest("[data-dishware]");
+  if (dishware) {
+    const form = dishware.closest("form");
+    pendingDishware = dishware.dataset.dishware === "bowl" ? "bowl" : "plate";
+    pendingDishwarePattern = resolveDishwarePattern(pendingDishware, pendingDishwarePatternByType[pendingDishware]).id;
+    refreshDishwarePicker(form);
+  }
+  const dishwarePattern = event.target.closest("[data-dishware-pattern]");
+  if (dishwarePattern) {
+    const form = dishwarePattern.closest("form");
+    pendingDishwarePattern = resolveDishwarePattern(pendingDishware, dishwarePattern.dataset.dishwarePattern).id;
+    pendingDishwarePatternByType[pendingDishware] = pendingDishwarePattern;
+    refreshDishwarePicker(form);
+  }
   const category = event.target.closest("[data-category]");
   if (category) {
     category.parentElement.querySelectorAll(".chip").forEach(chip => chip.classList.toggle("is-selected", chip === category));
-    category.closest(".field").querySelector('input[name="category"]').value = category.dataset.category;
+    category.closest("form").elements.category.value = category.dataset.category;
   }
   const cooked = event.target.closest("[data-cooked]");
   if (cooked) {
@@ -938,7 +1469,32 @@ sheet.addEventListener("click", async event => {
   const actionTarget = event.target.closest("[data-action]");
   if (!actionTarget) return;
   const action = actionTarget.dataset.action;
+  if (action === "add-tag") {
+    const composer = actionTarget.closest("form").querySelector("#tagComposer");
+    composer.hidden = !composer.hidden;
+    if (!composer.hidden) composer.querySelector("input").focus();
+    return;
+  }
+  if (action === "confirm-tag") {
+    addDishTag();
+    return;
+  }
+  if (action === "remove-tag") {
+    const form = actionTarget.closest("form");
+    const tags = dishTagsFromForm(form).filter(tag => tag !== actionTarget.dataset.tagValue);
+    form.elements.tags.value = tags.join("，");
+    renderDishTags(form);
+    return;
+  }
+  if (handleCropperAction(actionTarget)) return;
   const dish = getDish(actionTarget.dataset.id || recipeOptions.dishId);
+  if (action === "reset-data") {
+    state = normalizeState(defaults);
+    closeSheet();
+    render();
+    showToast("体验数据已重置");
+    return;
+  }
   if (action === "open-schedule" && dish) openSheet(scheduleSheet(dish));
   if (action === "open-edit" && dish) openSheet(dishForm(dish));
   if (action === "open-recipe" && dish) {
@@ -983,15 +1539,54 @@ sheet.addEventListener("click", async event => {
 });
 
 sheet.addEventListener("change", async event => {
+  if (event.target.id === "useOriginalPhoto") {
+    pendingImageFit = event.target.checked ? "contain" : "cover";
+    pendingImage = event.target.checked ? pendingOriginalImage : pendingCroppedImage || pendingOriginalImage;
+    refreshDishPhotoPreview();
+    return;
+  }
   if (!event.target.matches("[data-image-input]")) return;
   try {
-    pendingImage = await compressImage(event.target.files[0]);
-    document.querySelector("#imagePreview").innerHTML = `<img src="${pendingImage}" alt="菜品预览">`;
+    pendingOriginalImage = await compressImage(event.target.files[0]);
+    pendingCroppedImage = "";
+    pendingImage = pendingOriginalImage;
+    pendingImageFit = "cover";
+    refreshDishPhotoPreview();
+    openPhotoCropper();
   } catch (error) {
     showToast(error.message || "图片处理失败");
   }
   event.target.value = "";
 });
+
+sheet.addEventListener("input", event => {
+  if (event.target.id === "dishNote") {
+    const count = document.querySelector("#dishNoteCount");
+    if (count) count.textContent = String(event.target.value.length);
+  }
+  if (event.target.id === "cropZoom") setCropZoom(event.target.value);
+});
+
+sheet.addEventListener("keydown", event => {
+  if (event.target.id === "newTagInput" && event.key === "Enter") {
+    event.preventDefault();
+    addDishTag();
+  }
+});
+
+appShell.addEventListener("click", event => {
+  const actionTarget = event.target.closest("#photoCropper [data-action]");
+  if (actionTarget) handleCropperAction(actionTarget);
+});
+
+appShell.addEventListener("input", event => {
+  if (event.target.id === "cropZoom") setCropZoom(event.target.value);
+});
+
+appShell.addEventListener("pointerdown", handleCropPointerDown);
+appShell.addEventListener("pointermove", handleCropPointerMove);
+appShell.addEventListener("pointerup", handleCropPointerEnd);
+appShell.addEventListener("pointercancel", handleCropPointerEnd);
 
 sheet.addEventListener("submit", event => {
   event.preventDefault();
@@ -1004,18 +1599,23 @@ sheet.addEventListener("submit", event => {
     if (recipeUrlInput && !recipeUrl) return showToast("菜谱链接仅支持 http 或 https");
     const id = cleanText(data.get("dishId"), 80);
     const existing = getDish(id);
+    const savedDishware = data.get("dishware") === "bowl" ? "bowl" : "plate";
+    const savedDishwarePattern = resolveDishwarePattern(savedDishware, data.get("dishwarePattern")).id;
     const next = {
       id: existing?.id || uid("dish"),
       name,
       category: CATEGORIES.includes(data.get("category")) ? data.get("category") : "其他",
       cooked: data.get("cooked") === "true",
       colors: existing?.colors || ["#dba91e", "#63358a"],
-      note: cleanText(data.get("note"), 240),
+      note: cleanText(data.get("note"), 300),
       recipeUrl,
       tags: normalizeStringList(String(data.get("tags") || "").split(/[,，、\n]/), 8).map(tag => tag.slice(0, 16)),
       ingredients: normalizeStringList(data.get("ingredients")),
       steps: normalizeStringList(data.get("steps"), 16),
-      image: safeImage(pendingImage)
+      image: safeImage(pendingImage),
+      imageFit: pendingImageFit === "contain" ? "contain" : "cover",
+      dishware: savedDishware,
+      dishwarePattern: savedDishwarePattern
     };
     if (existing) Object.assign(existing, next);
     else state.dishes.push(next);
@@ -1047,7 +1647,10 @@ sheet.addEventListener("submit", event => {
 document.querySelector("#sheetClose").addEventListener("click", closeSheet);
 backdrop.addEventListener("click", closeSheet);
 document.addEventListener("keydown", event => {
-  if (event.key === "Escape" && !sheet.hidden) closeSheet();
+  if (event.key !== "Escape") return;
+  const cropper = document.querySelector("#photoCropper");
+  if (cropper && !cropper.hidden) closePhotoCropper();
+  else if (!sheet.hidden) closeSheet();
 });
 document.addEventListener("pointerdown", () => {
   if (state.settings.bgm && !bgmTimer) void startBgm();
